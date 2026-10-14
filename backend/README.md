@@ -45,6 +45,15 @@ Una vez creadas las tablas, cortá el proceso y arrancá normalmente. `DB_SYNC` 
 `sequelize.sync({ alter: true })`, que **modifica el esquema existente** — puede
 alterar o borrar columnas con datos. Dejala sin definir salvo que sepas lo que hacés.
 
+### Actualizar una base existente
+
+Si la base ya tenía datos antes de que se agregara el CUIL de los huéspedes, corré
+una vez (no borra nada y se puede repetir):
+
+```bash
+node src/seed/agregarCuil.js
+```
+
 ### Cargar datos iniciales
 
 ```bash

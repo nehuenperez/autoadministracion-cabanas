@@ -21,6 +21,7 @@ const CAMPOS_EDITABLES_HUESPED = [
   'nombre',
   'apellido',
   'dni',
+  'cuil',
   'telefono',
   'direccion',
   'vehiculoModelo',

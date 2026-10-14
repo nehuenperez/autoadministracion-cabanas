@@ -122,6 +122,24 @@ describe('Validación de huéspedes', () => {
     assert.notEqual(r.status, 400);
   });
 
+  it('acepta un huésped con CUIL', async () => {
+    const r = await pedir('/api/huespedes', {
+      metodo: 'POST',
+      token,
+      cuerpo: { ...valido, cuil: '27-30111222-4' },
+    });
+    assert.notEqual(r.status, 400);
+  });
+
+  it('rechaza un CUIL demasiado largo', async () => {
+    const r = await pedir('/api/huespedes', {
+      metodo: 'POST',
+      token,
+      cuerpo: { ...valido, cuil: '2'.repeat(21) },
+    });
+    assert.equal(r.status, 400);
+  });
+
   it('rechaza un rol fuera del enum al vincular', async () => {
     const r = await pedir('/api/huespedes/reservas/1/vincular', {
       metodo: 'POST',

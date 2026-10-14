@@ -85,6 +85,7 @@ const esquemas = {
     apellido: z.string().trim().min(1, 'es obligatorio').max(100),
     // Se deja flexible a propósito: puede ser DNI, pasaporte o documento extranjero.
     dni: z.string().trim().min(1, 'es obligatorio').max(20),
+    cuil: z.string().trim().max(20).optional().nullable(),
     telefono: textoOpcional,
     direccion: textoOpcional,
     vehiculoModelo: textoOpcional,

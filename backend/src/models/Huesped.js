@@ -20,6 +20,10 @@ const Huesped = sequelize.define('Huesped', {
     allowNull: false,
     unique: true, // clave para el autocompletado: un huésped = un DNI
   },
+  cuil: {
+    type: DataTypes.STRING,
+    allowNull: true,
+  },
   telefono: {
   type: DataTypes.STRING,
   allowNull: true,

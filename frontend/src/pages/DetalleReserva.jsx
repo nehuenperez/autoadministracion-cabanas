@@ -7,6 +7,7 @@ import {
 import { listarPagos, registrarPago } from '../services/pagos.service.js';
 import { vincularAReserva, crearHuesped } from '../services/huespedes.service.js';
 import BuscadorPorDni from '../components/reservas/BuscadorPorDni.jsx';
+import CargaRapidaHuespedes from '../components/reservas/CargaRapidaHuespedes.jsx';
 import BotonWhatsapp from '../components/reservas/BotonWhatsapp.jsx';
 import api from '../services/api.js'; 
 
@@ -112,6 +113,7 @@ export default function DetalleReserva() {
     setEditForm({
       id: h.id,
       dni: h.dni,
+      cuil: h.cuil || '',
       nombre: h.nombre,
       apellido: h.apellido,
       telefono: h.telefono || '',
@@ -250,7 +252,7 @@ export default function DetalleReserva() {
             direccion: h.direccion,
             vehiculoModelo: h.vehiculoModelo,
             vehiculoPatente: h.vehiculoPatente,
-            role: h.rol,
+            rol: h.rol,
           });
         }
       }
@@ -261,6 +263,43 @@ export default function DetalleReserva() {
       cargarTodo();
     } catch (err) {
       setMensajeAccion(err.response?.data?.error || 'Error al guardar huéspedes');
+    }
+  }
+
+  // Guarda los huéspedes revisados en la carga rápida y los suma a los que ya
+  // estaban vinculados. Devuelve true si salió bien, para que el componente
+  // limpie el formulario.
+  async function vincularDesdeMensaje(filas) {
+    try {
+      setMensajeAccion('Guardando huéspedes...');
+      const vinculos = (reserva.Huespeds || []).map((h) => ({ huespedId: h.id, rol: h.ReservaHuesped?.rol }));
+
+      for (const fila of filas) {
+        // crearHuesped crea o actualiza según el DNI. Se mandan sólo los campos
+        // con dato: un campo vacío no debe borrar lo que ya estaba guardado de
+        // una visita anterior.
+        const datos = {};
+        for (const campo of ['nombre', 'apellido', 'dni', 'cuil', 'telefono', 'direccion', 'vehiculoModelo', 'vehiculoPatente']) {
+          const valor = fila[campo].trim();
+          if (valor) datos[campo] = valor;
+        }
+        const guardado = await crearHuesped(datos);
+
+        const yaVinculado = vinculos.find((v) => v.huespedId === guardado.id);
+        if (yaVinculado) {
+          yaVinculado.rol = fila.rol;
+        } else {
+          vinculos.push({ huespedId: guardado.id, rol: fila.rol });
+        }
+      }
+
+      await vincularAReserva(id, vinculos);
+      setMensajeAccion('✨ Huéspedes vinculados correctamente');
+      cargarTodo();
+      return true;
+    } catch (err) {
+      setMensajeAccion(err.response?.data?.error || 'Error al guardar huéspedes');
+      return false;
     }
   }
 
@@ -460,7 +499,10 @@ export default function DetalleReserva() {
                   <input type="text" value={editForm.nombre} onChange={(e) => setEditForm({...editForm, nombre: e.target.value})} placeholder="Nombre" className="p-2 border border-slate-200 rounded-lg bg-slate-50" />
                   <input type="text" value={editForm.apellido} onChange={(e) => setEditForm({...editForm, apellido: e.target.value})} placeholder="Apellido" className="p-2 border border-slate-200 rounded-lg bg-slate-50" />
                 </div>
-                <input type="text" value={editForm.telefono} onChange={(e) => setEditForm({...editForm, telefono: e.target.value})} placeholder="Teléfono" className="w-full p-2 border border-slate-200 rounded-lg bg-slate-50" />
+                <div className="grid grid-cols-2 gap-2">
+                  <input type="text" value={editForm.telefono} onChange={(e) => setEditForm({...editForm, telefono: e.target.value})} placeholder="Teléfono" className="p-2 border border-slate-200 rounded-lg bg-slate-50" />
+                  <input type="text" value={editForm.cuil} onChange={(e) => setEditForm({...editForm, cuil: e.target.value})} placeholder="CUIL" className="p-2 border border-slate-200 rounded-lg bg-slate-50" />
+                </div>
                 <input type="text" value={editForm.direccion} onChange={(e) => setEditForm({...editForm, direccion: e.target.value})} placeholder="Dirección" className="w-full p-2 border border-slate-200 rounded-lg bg-slate-50" />
                 <div className="grid grid-cols-2 gap-2">
                   <input type="text" value={editForm.vehiculoModelo} onChange={(e) => setEditForm({...editForm, vehiculoModelo: e.target.value})} placeholder="Vehículo Modelo" className="p-2 border border-slate-200 rounded-lg bg-slate-50" />
@@ -477,6 +519,7 @@ export default function DetalleReserva() {
                 <h4 className="text-lg font-bold text-slate-900 capitalize tracking-tight">{titularActual.nombre} {titularActual.apellido}</h4>
                 <div className="grid grid-cols-1 gap-1.5 text-xs font-medium text-slate-600">
                   <p className="text-slate-500">DNI: <span className="text-slate-800 font-semibold">{titularActual.dni}</span></p>
+                  {titularActual.cuil && <p className="text-slate-500">CUIL: <span className="text-slate-800 font-semibold">{titularActual.cuil}</span></p>}
                   {titularActual.telefono && <p className="text-slate-500">Tel: <span className="text-slate-800 font-semibold">{titularActual.telefono}</span></p>}
                   {titularActual.direccion && <p className="text-slate-500">Dir: <span className="text-slate-800 font-semibold">{titularActual.direccion}</span></p>}
                   {titularActual.vehiculoPatente && (
@@ -631,6 +674,11 @@ export default function DetalleReserva() {
           <h3 className="text-sm font-bold text-slate-900 tracking-tight">
             {titularActual ? 'Agregar acompañantes' : 'Asignar Huéspedes'}
           </h3>
+          <div className="p-3 bg-blue-50/50 rounded-xl border border-blue-100 space-y-2">
+            <span className="text-[10px] font-bold text-blue-700 uppercase tracking-wider block">Carga rápida: pegá el mensaje</span>
+            <CargaRapidaHuespedes titularActual={titularActual} onConfirmar={vincularDesdeMensaje} />
+          </div>
+          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider text-center">o cargalos a mano</p>
           <div className="space-y-3">
             {!titularActual && (
               <div className="p-3 bg-slate-50 rounded-xl border border-slate-200/60">

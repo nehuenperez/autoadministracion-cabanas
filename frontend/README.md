@@ -40,8 +40,7 @@ El backend tiene que estar corriendo y hay que tener un usuario creado
 | `/login` | Ingreso |
 | `/` | Calendario mensual con las reservas activas |
 | `/reservas/nueva` | Alta de reserva |
-| `/reservas/:id` | Detalle: huéspedes, cobros, saldo |
-| `/reservas/:id/editar` | Edición |
+| `/reservas/:id` | Detalle: huéspedes, cobros, saldo. Fechas y montos se editan desde acá |
 | `/reservas-anteriores` | Historial |
 | `/estadisticas` | Ingresos y ocupación por mes |
 

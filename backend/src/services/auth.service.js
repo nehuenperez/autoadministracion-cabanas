@@ -25,7 +25,9 @@ async function login(nombreUsuario, password) {
   const token = jwt.sign(
     { id: usuario.id, nombreUsuario: usuario.nombreUsuario }, // payload: sin password, sin datos sensibles
     process.env.JWT_SECRET,
-    { expiresIn: process.env.JWT_EXPIRES_IN }
+    // Sin el fallback, si JWT_EXPIRES_IN no está cargada jwt.sign() tira y
+    // todos los logins terminan en un 500.
+    { expiresIn: process.env.JWT_EXPIRES_IN || '30d' }
   );
 
   return { token, usuario: { id: usuario.id, nombreUsuario: usuario.nombreUsuario } };

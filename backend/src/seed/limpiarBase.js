@@ -1,3 +1,6 @@
+import dotenv from 'dotenv';
+dotenv.config();
+
 import { sequelize } from '../models/index.js';
 
 // Este script borra TODAS las reservas, huéspedes y pagos de la base a la que apunte
@@ -23,7 +26,8 @@ async function vaciarDatosDePrueba() {
     
     // Ejecutamos un TRUNCATE directo mediante query nativa para evitar conflictos de claves foráneas (FK)
     // y resetear los contadores auto-incrementales a 1.
-    await sequelize.query('TRUNCATE TABLE "Pagos", "ReservaHuespeds", "Reservas", "Huespeds" RESTART IDENTITY CASCADE;');
+    // Los nombres son los `tableName` de los modelos, no los nombres por defecto de Sequelize.
+    await sequelize.query('TRUNCATE TABLE pagos, reserva_huespedes, reservas, huespedes RESTART IDENTITY CASCADE;');
     
     console.log('✨ Base de datos limpia de manera exitosa.');
     console.log('Cabañas y Usuarios permanecen intactos.');

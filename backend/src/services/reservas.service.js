@@ -1,5 +1,6 @@
 import { Op } from 'sequelize';
 import { Reserva, Cabana, Pago, Huesped } from '../models/index.js';
+import { sincronizarEstadoConSaldo } from './pagos.service.js';
 
 class ReservaError extends Error {
   constructor(mensaje, status) {
@@ -113,6 +114,9 @@ async function editarReserva(id, datos) {
     porcentajeSena,
     montoSena,
   });
+
+  // Si cambió el total, una reserva Pagada puede volver a deber (o al revés)
+  await sincronizarEstadoConSaldo(reserva);
 
   return reserva;
 }

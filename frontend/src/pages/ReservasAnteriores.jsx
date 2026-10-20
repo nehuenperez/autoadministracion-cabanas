@@ -154,6 +154,8 @@ export default function ReservasAnteriores() {
                     <div className="space-y-2.5 pl-1 border-l-2 border-slate-200/50 ml-2 animate-fadeIn">
                       {reservasDelMes.map((reserva) => {
                         const titular = reserva.Huespeds?.find(h => h.ReservaHuesped?.role === 'titular' || h.ReservaHuesped?.rol === 'titular');
+                        // Lo cobrado de verdad, no el total pactado (en una Abortada no son lo mismo)
+                        const recaudado = (reserva.Pagos || []).reduce((acum, p) => acum + Number(p.monto), 0);
 
                         return (
                           <div
@@ -184,7 +186,7 @@ export default function ReservasAnteriores() {
                             <div className="pt-2 border-t border-slate-100 flex justify-between items-center text-[11px]">
                               <span className="text-slate-400 font-medium">Monto Recaudado:</span>
                               <span className="font-bold text-slate-900 bg-slate-50 px-2 py-0.5 rounded border border-slate-100">
-                                ${Number(reserva.montoTotal).toLocaleString('es-AR')}
+                                ${recaudado.toLocaleString('es-AR')}
                               </span>
                             </div>
                           </div>

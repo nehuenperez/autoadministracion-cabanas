@@ -1,11 +1,14 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import api from '../services/api.js';
 import { crearReserva } from '../services/reservas.service.js';
+import { vincularAReserva } from '../services/huespedes.service.js';
 import FormularioReserva from '../components/reservas/FormularioReserva.jsx';
 
 export default function NuevaReserva() {
   const navigate = useNavigate();
+  // Viene desde "Cliente desea agregar días": la reserva nueva queda a nombre del mismo titular
+  const titularAClonar = useLocation().state?.clonarHuesped;
   const [cabanas, setCabanas] = useState([]);
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState('');
@@ -27,6 +30,13 @@ export default function NuevaReserva() {
     setError('');
     try {
       const nuevaReserva = await crearReserva(datosNuevaReserva);
+      if (titularAClonar) {
+        try {
+          await vincularAReserva(nuevaReserva.id, [{ huespedId: titularAClonar.id, rol: 'titular' }]);
+        } catch {
+          // La reserva ya está creada: si falla el vínculo, el titular se carga a mano en el detalle
+        }
+      }
       // Una vez generada con éxito, mandamos a tu mamá directo al detalle para asociar huéspedes
       navigate(`/reservas/${nuevaReserva.id}`);
     } catch (err) {
@@ -58,6 +68,11 @@ export default function NuevaReserva() {
           <div className="border-b border-slate-50 pb-2">
             <h2 className="text-base font-bold text-slate-900">Bloqueo de Disponibilidad</h2>
             <p className="text-xs text-slate-400 mt-0.5">Ingresá los datos del período para reservar la propiedad.</p>
+            {titularAClonar && (
+              <p className="text-xs font-semibold text-blue-700 bg-blue-50 border border-blue-100 rounded-lg p-2 mt-2">
+                Titular: <span className="capitalize">{titularAClonar.nombre} {titularAClonar.apellido}</span>
+              </p>
+            )}
           </div>
 
           {error && !cabanas.length ? (

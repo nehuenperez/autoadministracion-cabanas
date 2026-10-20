@@ -32,19 +32,13 @@ export default function Calendario() {
         setCabanas(listaCabanas);
         setReservas(listaTotalReservas);
 
-        // Mapeamos los cobros de todas las reservas de forma segura
+        // Los listados ya traen los cobros de cada reserva. Antes se pedían de
+        // nuevo uno por uno (una llamada por reserva, historial incluido) y si
+        // alguna fallaba la reserva aparecía "Sin Seña" aunque estuviera paga.
         const mapaPagos = {};
-        await Promise.all(
-          listaTotalReservas.map(async (reserva) => {
-            if (!reserva?.id) return;
-            try {
-              const { data } = await api.get(`/pagos/reservas/${reserva.id}`);
-              mapaPagos[reserva.id] = Array.isArray(data) ? data : [];
-            } catch {
-              mapaPagos[reserva.id] = [];
-            }
-          })
-        );
+        for (const reserva of listaTotalReservas) {
+          if (reserva?.id) mapaPagos[reserva.id] = Array.isArray(reserva.Pagos) ? reserva.Pagos : [];
+        }
         setPagosPorReserva(mapaPagos);
 
       } catch {

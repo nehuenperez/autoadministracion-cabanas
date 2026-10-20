@@ -40,14 +40,6 @@ export default function App() {
             }
           />
           <Route
-            path="/reservas/:id/editar"
-            element={
-              <RutaProtegida>
-                <NuevaReserva />
-              </RutaProtegida>
-            }
-          />
-          <Route
             path="/reservas-anteriores"
             element={
               <RutaProtegida>

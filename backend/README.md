@@ -28,7 +28,7 @@ Variables de entorno (ver `.env.example`):
 |---|---|---|
 | `DATABASE_URL` | sí | Cadena de conexión de PostgreSQL |
 | `JWT_SECRET` | sí | Mínimo 32 caracteres. Generar con `openssl rand -base64 48` |
-| `JWT_EXPIRES_IN` | sí | Duración del token, ej. `30d` |
+| `JWT_EXPIRES_IN` | no | Duración del token. Por defecto `30d` |
 | `PORT` | no | Por defecto `3000` |
 | `CORS_ORIGINS` | recomendada | Dominios autorizados, separados por coma. Si queda vacía la API acepta cualquier origen |
 | `DB_SYNC` | no | `true` sincroniza el esquema al arrancar. **Nunca en producción** |

@@ -32,7 +32,7 @@ export default function DetalleReserva() {
 
   // NUEVOS ESTADOS: Controlan la edición de los montos de la estadía
   const [editandoCuentas, setEditandoCuentas] = useState(false);
-  const [formCuentas, setFormCuentas] = useState({ montoTotal: '', montoSena: '' });
+  const [formCuentas, setFormCuentas] = useState({ montoTotal: '', porcentajeSena: '' });
 
   // useCallback para que la referencia sólo cambie cuando cambia el id: así el
   // efecto de abajo puede declararla como dependencia sin recargar en bucle.
@@ -51,10 +51,10 @@ export default function DetalleReserva() {
         fechaCheckOut: reservaData.fechaCheckOut || ''
       });
 
-      // Precargamos los montos actuales formateados regionalmente
+      // Precargamos el total formateado regionalmente y el porcentaje de seña
       setFormCuentas({
         montoTotal: Number(reservaData.montoTotal || 0).toLocaleString('es-AR'),
-        montoSena: Number(reservaData.montoSena || 0).toLocaleString('es-AR')
+        porcentajeSena: String(Number(reservaData.porcentajeSena || 0))
       });
     } catch {
       setError('No se pudo cargar la reserva');
@@ -83,17 +83,15 @@ export default function DetalleReserva() {
     }
   }
 
-  // NUEVA FUNCIÓN: Limpia los puntos del string y guarda los nuevos montos en la BD
+  // Limpia los puntos del total y guarda. La seña se manda como porcentaje:
+  // el backend calcula el monto y descarta un montoSena que venga del cliente.
   async function handleGuardarMontos() {
     try {
       setMensajeAccion('Recalculando estado de cuentas...');
-      
-      const rawMontoTotal = Number(String(formCuentas.montoTotal).replace(/\D/g, '')) || 0;
-      const rawMontoSena = Number(String(formCuentas.montoSena).replace(/\D/g, '')) || 0;
 
       await api.put(`/reservas/${id}`, {
-        montoTotal: rawMontoTotal,
-        montoSena: rawMontoSena
+        montoTotal: Number(String(formCuentas.montoTotal).replace(/\D/g, '')) || 0,
+        porcentajeSena: Number(formCuentas.porcentajeSena) || 0,
       });
 
       setMensajeAccion('✨ Montos corregidos correctamente');
@@ -198,66 +196,30 @@ export default function DetalleReserva() {
 
     try {
       setMensajeAccion('Procesando...');
-      const huespedesAEnviar = [];
-
-      if (titularActual) {
-        huespedesAEnviar.push({
-          huespedId: titularActual.id,
-          dni: titularActual.dni,
-          nombre: titularActual.nombre,
-          apellido: titularActual.apellido,
-          telefono: titularActual.telefono,
-          direccion: titularActual.direccion,
-          vehiculoModelo: titularActual.vehiculoModelo,
-          vehiculoPatente: titularActual.vehiculoPatente,
-          rol: 'titular',
-        });
-      }
+      // El backend reemplaza todos los vínculos de la reserva: hay que mandar
+      // también los que ya estaban, o los acompañantes cargados antes se pierden.
+      const vinculos = (reserva.Huespeds || []).map((h) => ({ huespedId: h.id, rol: h.ReservaHuesped?.rol }));
 
       for (const h of Object.values(huespedesForm)) {
-        let huespedId = h.id;
-
-        if (!huespedId) {
-          const nuevoHuesped = await crearHuesped({
-            dni: h.dni,
-            nombre: h.nombre,
-            apellido: h.apellido,
-            telefono: h.telefono,
-            direccion: h.direccion,
-            vehiculoModelo: h.vehiculoModelo,
-            vehiculoPatente: h.vehiculoPatente,
-          });
-          huespedId = nuevoHuesped.id;
+        // crearHuesped crea o actualiza según el DNI, así que también guarda lo
+        // que se corrigió de un huésped que ya existía. Sólo se mandan los campos
+        // con dato para no borrar lo guardado de una visita anterior.
+        const datos = {};
+        for (const campo of ['dni', 'nombre', 'apellido', 'telefono', 'direccion', 'vehiculoModelo', 'vehiculoPatente']) {
+          const valor = String(h[campo] ?? '').trim();
+          if (valor) datos[campo] = valor;
         }
+        const guardado = await crearHuesped(datos);
 
-        if (h.rol === 'titular' && titularActual) {
-          huespedesAEnviar[0] = {
-            huespedId,
-            dni: h.dni,
-            nombre: h.nombre,
-            apellido: h.apellido,
-            telefono: h.telefono,
-            direccion: h.direccion,
-            vehiculoModelo: h.vehiculoModelo,
-            vehiculoPatente: h.vehiculoPatente,
-            rol: 'titular'
-          };
+        const yaVinculado = vinculos.find((v) => v.huespedId === guardado.id);
+        if (yaVinculado) {
+          yaVinculado.rol = h.rol;
         } else {
-          huespedesAEnviar.push({
-            huespedId: huespedId,
-            dni: h.dni,
-            nombre: h.nombre,
-            apellido: h.apellido,
-            telefono: h.telefono,
-            direccion: h.direccion,
-            vehiculoModelo: h.vehiculoModelo,
-            vehiculoPatente: h.vehiculoPatente,
-            rol: h.rol,
-          });
+          vinculos.push({ huespedId: guardado.id, rol: h.rol });
         }
       }
 
-      await vincularAReserva(id, huespedesAEnviar);
+      await vincularAReserva(id, vinculos);
       setMensajeAccion('✨ Huéspedes vinculados correctamente');
       setHuespedesForm({});
       cargarTodo();
@@ -610,19 +572,23 @@ export default function DetalleReserva() {
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="font-bold text-slate-500">Seña Requerida ($)</label>
-                  <input 
-                    type="text" 
-                    inputMode="numeric"
-                    value={formCuentas.montoSena} 
-                    onChange={(e) => {
-                      const clean = e.target.value.replace(/\D/g, '');
-                      setFormCuentas({ ...formCuentas, montoSena: clean ? Number(clean).toLocaleString('es-AR') : '' });
-                    }} 
+                  <label className="font-bold text-slate-500">Seña (%)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    step="0.01"
+                    value={formCuentas.porcentajeSena}
+                    onChange={(e) => setFormCuentas({ ...formCuentas, porcentajeSena: e.target.value })}
                     className="w-full p-2.5 border border-slate-200 rounded-lg bg-slate-50 font-bold text-slate-800 focus:border-blue-500 focus:outline-hidden"
                   />
                 </div>
               </div>
+              <p className="text-[11px] font-medium text-slate-500">
+                Seña requerida: <span className="font-bold text-slate-800">
+                  ${Number(((Number(String(formCuentas.montoTotal).replace(/\D/g, '')) || 0) * (Number(formCuentas.porcentajeSena) || 0) / 100).toFixed(2)).toLocaleString('es-AR')}
+                </span>
+              </p>
               <div className="flex gap-2 text-xs font-bold pt-1.5">
                 <button onClick={handleGuardarMontos} className="flex-1 bg-emerald-600 text-white p-2 rounded-xl cursor-pointer shadow-xs">
                   Guardar Montos

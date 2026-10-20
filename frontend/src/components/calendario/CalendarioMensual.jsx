@@ -68,6 +68,10 @@ export default function CalendarioMensual({ reservas = [], cabanas = [], pagosPo
 
       const diferenciaDias = (checkInFecha - hoy) / (1000 * 60 * 60 * 24);
 
+      // Check-in pasado con saldo: es rojo (olvido de cobro), igual que en el detalle
+      if (diferenciaDias < 0) {
+        return { bgCell: 'bg-rose-50/90 border-rose-200', textClass: 'text-rose-700 font-bold line-through decoration-rose-300', label: 'Saldo pendiente', badge: 'bg-rose-50 text-rose-700 border-rose-100' };
+      }
       if (diferenciaDias <= 1) {
         return { bgCell: 'bg-amber-50/90 border-amber-200', textClass: 'text-amber-800 font-bold line-through decoration-amber-400', label: 'Cobrar hoy', badge: 'bg-amber-50 text-amber-700 border-amber-100' };
       }

@@ -67,6 +67,18 @@ export default function FormularioReserva({ cabanas, valoresIniciales, onSubmit,
     });
   }
 
+  // true si ninguna noche entre el ingreso (inclusive) y el egreso (exclusive) está tomada.
+  // Se arma la fecha con los getters locales: toISOString() la pasa a UTC y
+  // puede correrla un día según la zona horaria del teléfono.
+  function rangoLibre(desdeStr, hastaStr) {
+    const fin = new Date(hastaStr + 'T00:00:00');
+    for (let d = new Date(desdeStr + 'T00:00:00'); d < fin; d.setDate(d.getDate() + 1)) {
+      const checkStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      if (verificarDiaOcupado(checkStr)) return false;
+    }
+    return true;
+  }
+
   // Maneja la selección secuencial de Check-In y Check-Out al tocar la grilla
   function seleccionarDiaCalendario(fechaStr) {
     if (!form.fechaCheckIn || (form.fechaCheckIn && form.fechaCheckOut)) {
@@ -76,19 +88,7 @@ export default function FormularioReserva({ cabanas, valoresIniciales, onSubmit,
         setForm(prev => ({ ...prev, fechaCheckIn: fechaStr, fechaCheckOut: '' }));
       } else {
         // Validación: verificar que no existan reservas en el medio del rango elegido
-        const inicio = new Date(form.fechaCheckIn + 'T00:00:00');
-        const fin = new Date(fechaStr + 'T00:00:00');
-        let tieneBloqueoIntermedio = false;
-
-        for (let d = new Date(inicio); d < fin; d.setDate(d.getDate() + 1)) {
-          const checkStr = d.toISOString().split('T')[0];
-          if (verificarDiaOcupado(checkStr)) {
-            tieneBloqueoIntermedio = true;
-            break;
-          }
-        }
-
-        if (tieneBloqueoIntermedio) {
+        if (!rangoLibre(form.fechaCheckIn, fechaStr)) {
           alert("⚠️ El rango seleccionado se solapa con una reserva existente.");
           return;
         }
@@ -123,7 +123,11 @@ export default function FormularioReserva({ cabanas, valoresIniciales, onSubmit,
       const fechaInstancia = new Date(anio, mes, d);
       const strFecha = `${anio}-${String(mes + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
       
-      const ocupado = verificarDiaOcupado(strFecha);
+      // El día en que entra otra reserva está "ocupado", pero sirve como egreso:
+      // uno se va a la mañana y el otro entra a la tarde (no hay solapamiento).
+      const eligiendoCheckOut = form.fechaCheckIn && !form.fechaCheckOut;
+      const ocupado = verificarDiaOcupado(strFecha) && strFecha !== form.fechaCheckOut &&
+        !(eligiendoCheckOut && strFecha > form.fechaCheckIn && rangoLibre(form.fechaCheckIn, strFecha));
       const esCheckIn = form.fechaCheckIn === strFecha;
       const esCheckOut = form.fechaCheckOut === strFecha;
       const dentroDelRango = form.fechaCheckIn && form.fechaCheckOut && 

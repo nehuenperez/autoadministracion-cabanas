@@ -1,4 +1,4 @@
-import { Huesped, Reserva, ReservaHuesped } from '../models/index.js';
+import { sequelize, Huesped, Reserva, ReservaHuesped } from '../models/index.js';
 
 class HuespedError extends Error {
   constructor(mensaje, status) {
@@ -94,8 +94,15 @@ async function vincularHuespedesAReserva(reservaId, huespedesConRol) {
     throw new HuespedError('Una reserva debe tener exactamente un titular', 400);
   }
 
-  // Reemplaza los vínculos existentes por los nuevos (útil tanto para alta como para edición)
-  await ReservaHuesped.destroy({ where: { reservaId } });
+  const ids = huespedesConRol.map((h) => h.huespedId);
+  if (new Set(ids).size !== ids.length) {
+    throw new HuespedError('El mismo huésped está cargado dos veces', 400);
+  }
+
+  const existentes = await Huesped.count({ where: { id: ids } });
+  if (existentes !== ids.length) {
+    throw new HuespedError('Alguno de los huéspedes no existe', 404);
+  }
 
   const registros = huespedesConRol.map((h) => ({
     reservaId,
@@ -103,7 +110,13 @@ async function vincularHuespedesAReserva(reservaId, huespedesConRol) {
     rol: h.rol,
   }));
 
-  await ReservaHuesped.bulkCreate(registros);
+  // Reemplaza los vínculos existentes por los nuevos (útil tanto para alta como para edición).
+  // En una transacción: si el alta falla, el borrado se deshace y la reserva
+  // no se queda sin huéspedes.
+  await sequelize.transaction(async (transaction) => {
+    await ReservaHuesped.destroy({ where: { reservaId }, transaction });
+    await ReservaHuesped.bulkCreate(registros, { transaction });
+  });
 
   return Reserva.findByPk(reservaId, {
     include: [{ model: Huesped }],

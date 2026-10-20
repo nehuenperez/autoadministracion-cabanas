@@ -1,4 +1,6 @@
 import { Pago, Reserva } from '../models/index.js';
+import { fechaDeHoy } from '../utils/fechas.js';
+import { saldoPendiente } from '../utils/saldo.js';
 
 class PagoError extends Error {
   constructor(mensaje, status) {
@@ -9,15 +11,6 @@ class PagoError extends Error {
 
 // Sólo estas dos dependen del saldo. Finalizada y Abortada no se tocan.
 const ESTADOS_SEGUN_SALDO = ['Señada', 'Pagada'];
-
-/**
- * Fecha de hoy (AAAA-MM-DD) en Argentina. El servidor corre en UTC: con
- * new Date(), un cobro cargado después de las 21 h quedaba con fecha de
- * mañana y, a fin de mes, sumaba en la caja del mes siguiente.
- */
-function fechaDeHoy() {
-  return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Argentina/San_Luis' }).format(new Date());
-}
 
 /**
  * Deja el estado de la reserva acorde a su saldo: Pagada si no debe nada,
@@ -56,6 +49,8 @@ async function registrarPago(reservaId, datos) {
     reservaId,
     monto,
     metodoPago,
+    // Fecha de Argentina: con la del servidor (UTC), un cobro de las 22 h
+    // quedaba con fecha de mañana y a fin de mes sumaba en el mes siguiente.
     fecha: fecha || fechaDeHoy(),
   });
 
@@ -74,10 +69,7 @@ async function calcularSaldoPendiente(reservaId) {
     throw new PagoError('La reserva no existe', 404);
   }
 
-  const totalPagado = reserva.Pagos.reduce((acumulado, pago) => acumulado + Number(pago.monto), 0);
-  const saldo = Number(reserva.montoTotal) - totalPagado;
-
-  return Number(saldo.toFixed(2));
+  return saldoPendiente(reserva.montoTotal, reserva.Pagos);
 }
 
 async function listarPagosDeReserva(reservaId) {

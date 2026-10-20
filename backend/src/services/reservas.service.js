@@ -1,6 +1,8 @@
 import { Op } from 'sequelize';
 import { Reserva, Cabana, Pago, Huesped } from '../models/index.js';
 import { sincronizarEstadoConSaldo } from './pagos.service.js';
+import { fechaDeHoy } from '../utils/fechas.js';
+import { saldoPendiente } from '../utils/saldo.js';
 
 class ReservaError extends Error {
   constructor(mensaje, status) {
@@ -51,7 +53,7 @@ function calcularMontoSena(montoTotal, porcentajeSena) {
 async function crearReserva(datos) {
   const { cabanaId, fechaCheckIn, fechaCheckOut, montoTotal, porcentajeSena } = datos;
 
-  if (new Date(fechaCheckOut) <= new Date(fechaCheckIn)) {
+  if (fechaCheckOut <= fechaCheckIn) {
     throw new ReservaError('La fecha de check-out debe ser posterior a la de check-in', 400);
   }
 
@@ -93,7 +95,7 @@ async function editarReserva(id, datos) {
   const fechaCheckIn = datos.fechaCheckIn ?? reserva.fechaCheckIn;
   const fechaCheckOut = datos.fechaCheckOut ?? reserva.fechaCheckOut;
 
-  if (new Date(fechaCheckOut) <= new Date(fechaCheckIn)) {
+  if (fechaCheckOut <= fechaCheckIn) {
     throw new ReservaError('La fecha de check-out debe ser posterior a la de check-in', 400);
   }
 
@@ -136,84 +138,67 @@ async function abortarReserva(id) {
 }
 
 /**
- * Recalcula el estado de UNA reserva puntual según la fecha actual.
+ * Recalcula el estado de UNA reserva puntual según la fecha de hoy.
  * Si está Señada o Pagada y ya pasó el check-out, pasa a Finalizada.
  */
-function calcularEstadoActual(reserva) {
-  const hoy = new Date();
-  hoy.setHours(0, 0, 0, 0);
-  const checkOut = new Date(reserva.fechaCheckOut);
-
-  if (ESTADOS_QUE_BLOQUEAN.includes(reserva.estado) && hoy > checkOut) {
+function calcularEstadoActual(reserva, hoy = fechaDeHoy()) {
+  if (ESTADOS_QUE_BLOQUEAN.includes(reserva.estado) && reserva.fechaCheckOut < hoy) {
     return 'Finalizada';
   }
   return reserva.estado;
 }
 
 /**
- * Recorre todas las reservas activas y actualiza en la base las que ya deberían
- * estar Finalizadas. Se llama al principio de cada listado, así el estado
- * siempre está al día sin que nadie tenga que hacerlo a mano.
+ * Pasa a Finalizada toda reserva activa cuyo check-out ya pasó. Se llama al
+ * principio de cada listado, así el estado siempre está al día sin que nadie
+ * tenga que hacerlo a mano. Es la misma regla que calcularEstadoActual.
  */
 async function actualizarEstadosVencidos() {
-  const reservasActivas = await Reserva.findAll({
-    where: { estado: { [Op.in]: ESTADOS_QUE_BLOQUEAN } },
-  });
+  await Reserva.update(
+    { estado: 'Finalizada' },
+    {
+      where: {
+        estado: { [Op.in]: ESTADOS_QUE_BLOQUEAN },
+        fechaCheckOut: { [Op.lt]: fechaDeHoy() },
+      },
+    }
+  );
+}
 
-  const hoy = new Date();
-  hoy.setHours(0, 0, 0, 0);
+const INCLUIR_TODO = [{ model: Cabana }, { model: Pago }, { model: Huesped }];
 
-  const idsAFinalizar = reservasActivas
-    .filter((r) => new Date(r.fechaCheckOut) < hoy)
-    .map((r) => r.id);
-
-  if (idsAFinalizar.length > 0) {
-    await Reserva.update(
-      { estado: 'Finalizada' },
-      { where: { id: { [Op.in]: idsAFinalizar } } }
-    );
-  }
+/** La reserva como JSON, con el saldo pendiente ya calculado. */
+function conSaldo(reserva) {
+  return { ...reserva.toJSON(), saldoPendiente: saldoPendiente(reserva.montoTotal, reserva.Pagos) };
 }
 
 async function listarReservasActivas() {
   await actualizarEstadosVencidos();
   const reservas = await Reserva.findAll({
     where: { estado: { [Op.in]: ESTADOS_QUE_BLOQUEAN } },
-    include: [{ model: Cabana }, { model: Pago }, { model: Huesped }],
+    include: INCLUIR_TODO,
     order: [['fechaCheckIn', 'ASC']],
   });
-
-  return reservas.map((reserva) => {
-    const totalPagado = reserva.Pagos.reduce((acum, p) => acum + Number(p.monto), 0);
-    const saldoPendiente = Number((Number(reserva.montoTotal) - totalPagado).toFixed(2));
-    return { ...reserva.toJSON(), saldoPendiente };
-  });
+  return reservas.map(conSaldo);
 }
 
 async function listarReservasHistoricas() {
   await actualizarEstadosVencidos();
   const reservas = await Reserva.findAll({
     where: { estado: { [Op.in]: ['Finalizada', 'Abortada'] } },
-    include: [{ model: Cabana }, { model: Pago }, { model: Huesped }],
+    include: INCLUIR_TODO,
     order: [['fechaCheckIn', 'DESC']],
   });
-
-  return reservas.map((reserva) => {
-    const totalPagado = reserva.Pagos.reduce((acum, p) => acum + Number(p.monto), 0);
-    const saldoPendiente = Number((Number(reserva.montoTotal) - totalPagado).toFixed(2));
-    return { ...reserva.toJSON(), saldoPendiente };
-  });
+  return reservas.map(conSaldo);
 }
 
 async function obtenerReservaPorId(id) {
   await actualizarEstadosVencidos();
-  const reserva = await Reserva.findByPk(id, {
-    include: [{ model: Cabana }, { model: Huesped }, { model: Pago }],
-  });
+  const reserva = await Reserva.findByPk(id, { include: INCLUIR_TODO });
   if (!reserva) {
     throw new ReservaError('La reserva no existe', 404);
   }
-  return reserva;
+  return conSaldo(reserva);
 }
 
 export {

@@ -6,6 +6,7 @@ import assert from 'node:assert/strict';
 import './ayudas.js';
 
 import { calcularMontoSena, calcularEstadoActual } from '../src/services/reservas.service.js';
+import { fechaDeHoy, sumarDias } from '../src/utils/fechas.js';
 
 describe('calcularMontoSena', () => {
   it('calcula el porcentaje sobre el total', () => {
@@ -34,11 +35,12 @@ describe('calcularMontoSena', () => {
 });
 
 describe('calcularEstadoActual', () => {
-  const diasDesdeHoy = (dias) => {
-    const f = new Date();
-    f.setDate(f.getDate() + dias);
-    return f.toISOString().slice(0, 10);
-  };
+  const diasDesdeHoy = (dias) => sumarDias(fechaDeHoy(), dias);
+
+  it('el día del check-out la reserva sigue activa', () => {
+    const reserva = { estado: 'Señada', fechaCheckOut: diasDesdeHoy(0) };
+    assert.equal(calcularEstadoActual(reserva), 'Señada');
+  });
 
   it('pasa a Finalizada una reserva Señada cuyo check-out ya pasó', () => {
     const reserva = { estado: 'Señada', fechaCheckOut: diasDesdeHoy(-5) };

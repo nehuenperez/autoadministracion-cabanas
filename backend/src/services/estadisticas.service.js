@@ -1,5 +1,7 @@
 import { Op } from 'sequelize';
 import { Reserva, Pago, Cabana } from '../models/index.js';
+import { fechaDeHoy, rangoDelMes } from '../utils/fechas.js';
+import { totalCobrado, redondear } from '../utils/saldo.js';
 
 /**
  * Devuelve estadísticas mensuales.
@@ -33,18 +35,17 @@ function validarPeriodo(valor, porDefecto, minimo, maximo, nombre) {
 }
 
 async function obtenerEstadisticas(mes, anio) {
-  const fecha = new Date();
-  const mesNum = validarPeriodo(mes, fecha.getMonth() + 1, 1, 12, 'mes');
-  const anioNum = validarPeriodo(anio, fecha.getFullYear(), 2000, 2100, 'anio');
+  const [anioActual, mesActual] = fechaDeHoy().split('-').map(Number);
+  const mesNum = validarPeriodo(mes, mesActual, 1, 12, 'mes');
+  const anioNum = validarPeriodo(anio, anioActual, 2000, 2100, 'anio');
 
-  const inicioMes = new Date(anioNum, mesNum - 1, 1);
-  const finMes = new Date(anioNum, mesNum, 1);
+  const { inicio: inicioMes, fin: finMes } = rangoDelMes(mesNum, anioNum);
 
   // 1. CAJA GENERAL: Flujo de caja físico que entró al bolsillo estrictamente este mes
   const pagosDelMes = await Pago.findAll({
     where: { fecha: { [Op.gte]: inicioMes, [Op.lt]: finMes } },
   });
-  const ingresosDelMes = pagosDelMes.reduce((acum, p) => acum + Number(p.monto), 0);
+  const ingresosDelMes = totalCobrado(pagosDelMes);
 
   // 2. RESERVAS DEL MES: Traemos las reservas del período e incluimos sus cobros reales
   const reservasDelMes = await Reserva.findAll({
@@ -67,17 +68,10 @@ async function obtenerEstadisticas(mes, anio) {
       // Contamos la cantidad de reservas de la unidad
       reservasPorCabana[nombreCabana] = (reservasPorCabana[nombreCabana] || 0) + 1;
       
-      // Inicializamos la cabaña en el desglose financiero si no existe
-      if (ingresosPorCabana[nombreCabana] === undefined) {
-        ingresosPorCabana[nombreCabana] = 0;
-      }
-
-      // CORRECCIÓN CLAVE: Sumamos los importes reales cobrados de la reserva (no el montoTotal)
-      // Usamos un fallback por si el alias de Sequelize está en mayúscula o minúscula
-      const listaCobros = reserva.Pagos || reserva.pagos || [];
-      for (const cobro of listaCobros) {
-        ingresosPorCabana[nombreCabana] += Number(cobro.monto || 0);
-      }
+      // Lo cobrado de verdad en las reservas del mes (no el montoTotal pactado)
+      ingresosPorCabana[nombreCabana] = redondear(
+        (ingresosPorCabana[nombreCabana] || 0) + totalCobrado(reserva.Pagos)
+      );
     }
   }
 
@@ -91,7 +85,7 @@ async function obtenerEstadisticas(mes, anio) {
   return {
     mes: mesNum,
     anio: anioNum,
-    ingresosDelMes: Number(ingresosDelMes.toFixed(2)),
+    ingresosDelMes,
     totalReservas,
     reservasPorCabana,
     ingresosPorCabana, // Enviamos los cobros reales sumados por cada unidad

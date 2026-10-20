@@ -31,32 +31,31 @@ Variables de entorno (ver `.env.example`):
 | `JWT_EXPIRES_IN` | no | Duración del token. Por defecto `30d` |
 | `PORT` | no | Por defecto `3000` |
 | `CORS_ORIGINS` | recomendada | Dominios autorizados, separados por coma. Si queda vacía la API acepta cualquier origen |
-| `DB_SYNC` | no | `true` sincroniza el esquema al arrancar. **Nunca en producción** |
+| `DB_SSL` | no | `false` desactiva SSL, sólo para un Postgres local. Por defecto, SSL activado |
 
-### Crear las tablas
+### Esquema de la base: migraciones
 
-La primera vez, con la base vacía, hay que generar el esquema:
+El esquema se maneja con migraciones ([umzug](https://github.com/sequelize/umzug)):
+cada cambio de estructura es un archivo en `src/migraciones/` que se aplica una sola
+vez. La tabla `migraciones` de la base registra cuáles ya corrieron.
 
-```bash
-DB_SYNC=true npm start
-```
+**El servidor aplica las pendientes cada vez que arranca**, así que no hay que
+correr nada a mano: con una base vacía crea las tablas, y con la base al día no
+hace nada. Para aplicarlas sin levantar el servidor: `npm run migrar`.
 
-Una vez creadas las tablas, cortá el proceso y arrancá normalmente. `DB_SYNC` usa
-`sequelize.sync({ alter: true })`, que **modifica el esquema existente** — puede
-alterar o borrar columnas con datos. Dejala sin definir salvo que sepas lo que hacés.
+La migración inicial (`0001-esquema-inicial.js`) describe las tablas tal como
+estaban en producción. Contra una base con datos no cambia nada: sólo crea lo que
+falta. Los tests lo verifican sobre una base con datos cargados.
 
-### Actualizar una base existente
-
-Si la base ya tenía datos antes de que se agregara el CUIL de los huéspedes, corré
-una vez (no borra nada y se puede repetir):
-
-```bash
-node src/seed/agregarCuil.js
-```
+**Para cambiar el esquema**, agregá un archivo nuevo con el número siguiente
+(`0002-...js`) que exporte `up` (y `down` si se puede deshacer), y actualizá el
+modelo para que coincida. El test `esquema.test.js` falla si modelos y migraciones
+no generan exactamente el mismo esquema.
 
 ### Cargar datos iniciales
 
 ```bash
+npm run migrar                  # crea las tablas (sólo con una base nueva)
 node src/seed/crearCabanas.js   # carga las cabañas
 node src/seed/crearUsuario.js   # pide usuario y contraseña por consola
 ```
@@ -87,9 +86,20 @@ npm start      # producción
 npm test
 ```
 
-Cubren autenticación, validación de entrada, CORS, cabeceras de seguridad, límite de
-intentos y las reglas de negocio puras. Fuerzan una URL de base inexistente, así que no
-pueden tocar datos reales.
+Hay dos grupos:
+
+- **Sin base**: autenticación, validación de entrada, CORS, cabeceras de seguridad y
+  límite de intentos. Fuerzan una URL de base inexistente.
+- **Con base**: reglas de negocio (disponibilidad, cobros, estados, huéspedes),
+  estadísticas y migraciones. Levantan un Postgres real y descartable con los
+  binarios de `embedded-postgres`, en una carpeta temporal que se borra al
+  terminar. No hace falta instalar Postgres ni Docker.
+
+Ninguno puede tocar los datos reales: nunca leen `DATABASE_URL` del `.env`.
+
+En Windows, el Postgres de prueba necesita el runtime de Visual C++. Si falta, los
+tests con base fallan con un mensaje que lo dice: instalá
+*Microsoft Visual C++ Redistributable (x64)*.
 
 ## Endpoints
 

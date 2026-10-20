@@ -1,13 +1,16 @@
 import api from './api.js';
 
-async function listarPagos(reservaId) {
-  const { data } = await api.get(`/pagos/reservas/${reservaId}`);
-  return data;
-}
+// Los cobros de una reserva vienen incluidos en la reserva (GET /reservas/:id):
+// no hace falta pedirlos aparte.
 
 async function registrarPago(reservaId, datos) {
   const { data } = await api.post(`/pagos/reservas/${reservaId}`, datos);
   return data;
 }
 
-export { listarPagos, registrarPago };
+async function eliminarPago(pagoId) {
+  const { data } = await api.delete(`/pagos/${pagoId}`);
+  return data;
+}
+
+export { registrarPago, eliminarPago };

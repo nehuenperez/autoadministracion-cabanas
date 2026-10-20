@@ -1,105 +1,98 @@
 import { useState } from 'react';
 import { buscarPorDni } from '../../services/huespedes.service.js';
 
+const campo = 'w-full p-2.5 text-sm border border-slate-200 rounded-lg bg-white focus:outline-hidden focus:border-blue-500';
+const VACIO = { nombre: '', apellido: '', dni: '', telefono: '', direccion: '', vehiculoModelo: '', vehiculoPatente: '' };
+
+/**
+ * Carga manual de un huésped: se busca por DNI y, si ya vino antes, se
+ * completan sus datos y se muestran sus notas. Cada cambio se informa con
+ * `onHuespedListo`, para que la pantalla tenga siempre la última versión.
+ */
 export default function BuscadorPorDni({ rol, onHuespedListo }) {
-  const [datos, setDatos] = useState({
-    nombre: '', apellido: '', dni: '', telefono: '', direccion: '', vehiculoModelo: '', vehiculoPatente: '',
-  });
-  const [encontrado, setEncontrado] = useState(false);
-  const [buscando, setBuscando] = useState(false);
-  const [mostrarCampos, setMostrarCampos] = useState(false);
+  const [datos, setDatos] = useState(VACIO);
+  const [estado, setEstado] = useState('inicial'); // inicial | buscando | encontrado | nuevo | error
 
   async function handleBuscar() {
-    if (!datos.dni) return;
-    setBuscando(true);
+    if (!datos.dni.trim()) return;
+    setEstado('buscando');
     try {
-      const huesped = await buscarPorDni(datos.dni);
-      if (huesped) {
-        setDatos(huesped);
-        setEncontrado(true);
-        setMostrarCampos(true);
-        onHuespedListo({ ...huesped, rol });
-      } else {
-        setEncontrado(false);
-        setMostrarCampos(true);
-        onHuespedListo({ ...datos, rol }); // dni ya está en datos en este punto
-      }
-    } finally {
-      setBuscando(false);
+      const huesped = await buscarPorDni(datos.dni.trim());
+      const completos = huesped ? { ...VACIO, ...huesped } : datos;
+      setDatos(completos);
+      setEstado(huesped ? 'encontrado' : 'nuevo');
+      onHuespedListo({ ...completos, rol });
+    } catch {
+      setEstado('error');
     }
   }
 
-  function handleChangeCampo(campo, valor) {
-    const nuevosDatos = { ...datos, [campo]: valor };
-    setDatos(nuevosDatos);
-    onHuespedListo({ ...nuevosDatos, rol });
+  function cambiar(nombreCampo, valor) {
+    const nuevos = { ...datos, [nombreCampo]: valor };
+    setDatos(nuevos);
+    onHuespedListo({ ...nuevos, rol });
   }
 
-  const estilos = {
-    input: { width: '100%', padding: 8, marginBottom: 6, fontSize: 14, borderRadius: 6, border: '1px solid #ccc' },
-  };
+  const entrada = (nombreCampo, placeholder) => (
+    <input placeholder={placeholder} value={datos[nombreCampo] ?? ''} onChange={(e) => cambiar(nombreCampo, e.target.value)} className={campo} />
+  );
+
+  const mostrarCampos = estado === 'encontrado' || estado === 'nuevo';
 
   return (
-    <div style={{ border: '1px solid #ddd', borderRadius: 8, padding: 12, marginBottom: 12 }}>
-      <strong style={{ fontSize: 13, textTransform: 'uppercase', color: '#666' }}>{rol}</strong>
-
-      <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
+    <div className="space-y-2">
+      <div className="flex gap-2">
         <input
           placeholder="DNI"
+          inputMode="numeric"
           value={datos.dni}
-          onChange={(e) => handleChangeCampo('dni', e.target.value)}
-          style={{ ...estilos.input, marginBottom: 0 }}
+          onChange={(e) => cambiar('dni', e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              handleBuscar();
+            }
+          }}
+          className={campo}
         />
-        <button type="button" onClick={handleBuscar} disabled={buscando}>
-          {buscando ? '...' : 'Buscar'}
+        <button
+          type="button"
+          onClick={handleBuscar}
+          disabled={estado === 'buscando' || !datos.dni.trim()}
+          className="bg-slate-800 text-white text-xs font-bold px-4 rounded-lg cursor-pointer disabled:bg-slate-300"
+        >
+          {estado === 'buscando' ? '...' : 'Buscar'}
         </button>
       </div>
 
+      {estado === 'error' && (
+        <p className="text-[11px] font-semibold text-rose-600">No se pudo buscar. Revisá la conexión y probá de nuevo.</p>
+      )}
+
       {mostrarCampos && (
-        <div style={{ marginTop: 8 }}>
-          {!encontrado && <p style={{ fontSize: 12, color: '#888' }}>Huésped nuevo, completá los datos:</p>}
-          <input
-            placeholder="Nombre"
-            value={datos.nombre || ''}
-            onChange={(e) => handleChangeCampo('nombre', e.target.value)}
-            style={estilos.input}
-          />
-          <input
-            placeholder="Apellido"
-            value={datos.apellido || ''}
-            onChange={(e) => handleChangeCampo('apellido', e.target.value)}
-            style={estilos.input}
-          />
+        <div className="space-y-2 animate-aparecer">
+          {estado === 'nuevo' && <p className="text-[11px] text-slate-500">Huésped nuevo, completá los datos:</p>}
+          {estado === 'encontrado' && (
+            <p className="text-[9px] font-bold uppercase inline-block bg-emerald-50 text-emerald-700 border border-emerald-100 px-1.5 py-0.5 rounded">
+              Ya vino antes
+            </p>
+          )}
+          <div className="grid grid-cols-2 gap-2">
+            {entrada('nombre', 'Nombre')}
+            {entrada('apellido', 'Apellido')}
+          </div>
           {rol === 'titular' && (
             <>
-              <input
-                placeholder="Teléfono (para WhatsApp)"
-                value={datos.telefono || ''}
-                onChange={(e) => handleChangeCampo('telefono', e.target.value)}
-                style={estilos.input}
-              />
-              <input
-                placeholder="Domicilio"
-                value={datos.direccion || ''}
-                onChange={(e) => handleChangeCampo('direccion', e.target.value)}
-                style={estilos.input}
-              />
-              <input
-                placeholder="Modelo del vehículo"
-                value={datos.vehiculoModelo || ''}
-                onChange={(e) => handleChangeCampo('vehiculoModelo', e.target.value)}
-                style={estilos.input}
-              />
-              <input
-                placeholder="Patente"
-                value={datos.vehiculoPatente || ''}
-                onChange={(e) => handleChangeCampo('vehiculoPatente', e.target.value)}
-                style={estilos.input}
-              />
+              {entrada('telefono', 'Teléfono (para WhatsApp)')}
+              {entrada('direccion', 'Domicilio')}
+              <div className="grid grid-cols-2 gap-2">
+                {entrada('vehiculoModelo', 'Modelo del vehículo')}
+                {entrada('vehiculoPatente', 'Patente')}
+              </div>
             </>
           )}
-          {encontrado && datos.notasComportamiento && (
-            <p style={{ fontSize: 12, background: '#fff3cd', padding: 6, borderRadius: 4 }}>
+          {estado === 'encontrado' && datos.notasComportamiento && (
+            <p className="text-[11px] p-2 bg-amber-50/60 border border-amber-100 rounded-lg text-amber-900">
               📋 Notas: {datos.notasComportamiento}
             </p>
           )}

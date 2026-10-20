@@ -4,6 +4,14 @@ import assert from 'node:assert/strict';
 import { aISO, deISO, sumarDias, diasEntre, formatearFecha, formatearRango, diasDelMes } from './fechas.js';
 import { parsearMonto, formatearMonto, formatearMientrasSeEscribe, calcularSena } from './montos.js';
 import { titularDe, acompanantesDe, vinculosDe, totalCobrado, saldoPendiente } from './reservas.js';
+import { soloConDato } from './huespedes.js';
+
+describe('huespedes', () => {
+  it('manda sólo los campos con dato, para no borrar lo guardado de otra visita', () => {
+    const fila = { nombre: ' Ana ', apellido: 'Gómez', dni: '30111222', telefono: '', direccion: null, id: 7, rol: 'titular' };
+    assert.deepEqual(soloConDato(fila), { nombre: 'Ana', apellido: 'Gómez', dni: '30111222' });
+  });
+});
 
 describe('fechas', () => {
   it('ida y vuelta entre texto y Date sin correrse de día', () => {

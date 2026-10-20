@@ -91,11 +91,11 @@ solapamiento. Es la situación más común en temporada alta y está cubierta po
 
 | Color | Significado |
 |---|---|
-| 🔵 Celeste | Señada, faltan más de 24 h para el check-in |
-| 🟡 Amarillo | Señada, faltan 24 h o menos — hay que cobrar |
+| 🔵 Celeste | Señada, falta más de un día para el check-in |
+| 🟡 Amarillo | El check-in es hoy o mañana — hay que cobrar |
 | 🟢 Verde | Saldada |
-| 🔴 Rojo | El check-in ya pasó y queda saldo pendiente |
-| 🔷 Azul oscuro | Finalizada |
+| 🔴 Rojo | Sin ningún cobro todavía, o el check-in ya pasó y queda saldo |
+| ⚪ Gris | Finalizada |
 | 🟠 Naranja | Abortada |
 
 ---
@@ -123,15 +123,27 @@ teléfono, patente—, así que se trató como corresponde y no como un proyecto
 ## Tests
 
 ```bash
-cd backend && npm test
+cd backend && npm test    # 116 tests
+cd frontend && npm test   # 38 tests
 ```
 
-70 tests sobre la capa que se resuelve antes de tocar la base: autenticación, validación
-de entrada, CORS, cabeceras y límite de intentos; más las reglas de negocio puras
-—cálculo de seña, transiciones de estado y solapamiento de fechas—.
+**Backend.** Dos grupos. Sin base: autenticación, validación de entrada, CORS,
+cabeceras y límite de intentos. Con base: las reglas de negocio de punta a punta
+(disponibilidad, cobros y estados, huéspedes, estadísticas) y las migraciones, contra
+un Postgres real y descartable que se levanta solo en una carpeta temporal. Ninguno
+puede tocar datos reales.
 
-Los tests fuerzan una URL de base de datos inexistente, así que por construcción no
-pueden tocar datos reales.
+**Frontend.** La lógica que decide lo que ve la usuaria: el semáforo de cobros, fechas,
+montos y el intérprete de mensajes de WhatsApp.
+
+---
+
+## Esquema de la base
+
+Se maneja con migraciones (`backend/src/migraciones/`). El servidor aplica las
+pendientes al arrancar y la base registra cuáles ya corrieron. Un test exige que
+migraciones y modelos generen exactamente el mismo esquema, y otro verifica que
+migrar una base con datos no cambie ningún dato.
 
 ---
 

@@ -1,48 +1,25 @@
-/* cabanas-frontend/src/index.css */
 @import "tailwindcss";
 
-:root {
-  --text: #6b6375;
-  --text-h: #08060d;
-  --bg: #fff;
-  --border: #e5e4e7;
-  --code-bg: #f4f3ec;
-  --accent: #aa3bff;
-  --accent-bg: rgba(170, 59, 255, 0.1);
-  --accent-border: rgba(170, 59, 255, 0.5);
-  --shadow:
-    rgba(0, 0, 0, 0.1) 0 10px 15px -3px, rgba(0, 0, 0, 0.05) 0 4px 6px -2px;
+/* Aparición suave de avisos y paneles: clase `animate-aparecer` */
+@theme {
+  --animate-aparecer: aparecer 150ms ease-out;
 
-  --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
-  --mono: ui-monospace, Consolas, monospace;
-
-  color-scheme: light dark;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --text: #9ca3af;
-    --text-h: #f3f4f6;
-    --bg: #16171d;
-    --border: #2e303a;
-    --code-bg: #1f2028;
-    --accent: #c084fc;
-    --accent-bg: rgba(192, 132, 252, 0.15);
-    --accent-border: rgba(192, 132, 252, 0.5);
-    --shadow:
-      rgba(0, 0, 0, 0.4) 0 10px 15px -3px, rgba(0, 0, 0, 0.25) 0 4px 6px -2px;
+  @keyframes aparecer {
+    from { opacity: 0; transform: translateY(-2px); }
+    to { opacity: 1; transform: none; }
   }
 }
 
-* {
-  box-sizing: border-box;
+:root {
+  /* La interfaz es sólo clara. Con "light dark", un celular en modo oscuro
+     pintaba los campos de fecha y los selectores oscuros sobre tarjetas blancas. */
+  color-scheme: light;
+  font-family: system-ui, 'Segoe UI', Roboto, sans-serif;
 }
 
 body {
   margin: 0;
-  font-family: var(--sans);
-  color: var(--text);
-  background: var(--bg);
+  background: #f8fafc;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }

@@ -15,46 +15,14 @@ export default function App() {
       <BrowserRouter>
         <Routes>
           <Route path="/login" element={<Login />} />
-          <Route
-            path="/"
-            element={
-              <RutaProtegida>
-                <Calendario />
-              </RutaProtegida>
-            }
-          />
-          <Route
-            path="/reservas/nueva"
-            element={
-              <RutaProtegida>
-                <NuevaReserva />
-              </RutaProtegida>
-            }
-          />
-          <Route
-            path="/estadisticas"
-            element={
-              <RutaProtegida>
-                <Estadisticas />
-              </RutaProtegida>
-            }
-          />
-          <Route
-            path="/reservas-anteriores"
-            element={
-              <RutaProtegida>
-                <ReservasAnteriores />
-              </RutaProtegida>
-            }
-          />
-          <Route
-            path="/reservas/:id"
-            element={
-              <RutaProtegida>
-                <DetalleReserva />
-              </RutaProtegida>
-            }
-          />
+          {/* Todo lo de adentro exige sesión iniciada */}
+          <Route element={<RutaProtegida />}>
+            <Route path="/" element={<Calendario />} />
+            <Route path="/reservas/nueva" element={<NuevaReserva />} />
+            <Route path="/reservas/:id" element={<DetalleReserva />} />
+            <Route path="/reservas-anteriores" element={<ReservasAnteriores />} />
+            <Route path="/estadisticas" element={<Estadisticas />} />
+          </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

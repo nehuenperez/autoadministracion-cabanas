@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth.js';
 
 export default function Login() {
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { usuario: sesion, login } = useAuth();
   const [usuario, setUsuario] = useState('');
   const [password, setPassword] = useState('');
   const [cargando, setCargando] = useState(false);
@@ -49,6 +49,11 @@ export default function Login() {
       setCargando(false);
       setDemorado(false);
     }
+  }
+
+  // Con la sesión abierta no tiene sentido volver a ingresar
+  if (sesion && !cargando) {
+    return <Navigate to="/" replace />;
   }
 
   return (
@@ -96,13 +101,13 @@ export default function Login() {
           </div>
 
           {error && (
-            <div className="p-2.5 bg-rose-50 border border-rose-100 rounded-lg text-center text-xs font-semibold text-rose-600 animate-fadeIn">
+            <div className="p-2.5 bg-rose-50 border border-rose-100 rounded-lg text-center text-xs font-semibold text-rose-600 animate-aparecer">
               {error}
             </div>
           )}
 
           {demorado && !error && (
-            <div className="p-2.5 bg-amber-50 border border-amber-100 rounded-lg text-center text-xs font-semibold text-amber-700 animate-fadeIn">
+            <div className="p-2.5 bg-amber-50 border border-amber-100 rounded-lg text-center text-xs font-semibold text-amber-700 animate-aparecer">
               Encendiendo el servidor, puede tardar hasta un minuto. No cierres la página.
             </div>
           )}

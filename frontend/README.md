@@ -46,18 +46,40 @@ El backend tiene que estar corriendo y hay que tener un usuario creado
 
 Todas menos `/login` están detrás de `RutaProtegida`.
 
+## Organización
+
+```
+src/
+├── pages/          una pantalla por ruta; cargan datos y coordinan
+├── components/
+│   ├── layout/     Pantalla, Encabezado, NavegacionInferior
+│   ├── comunes/    Tarjeta, Aviso, CampoMonto, SelectorDeMes, MensajeFlotante...
+│   ├── calendario/ calendario mensual con la agenda del día
+│   ├── detalle/    las tarjetas del detalle de una reserva
+│   └── reservas/   formulario de alta, selector de fechas, carga de huéspedes
+├── hooks/          useAuth, useDatos (carga de datos de una pantalla)
+├── services/       llamadas a la API, una por endpoint
+└── utils/          lógica pura y con tests: semáforo, fechas, montos, reservas
+```
+
+La regla: las pantallas no calculan nada por su cuenta. El color de una reserva sale
+siempre de `utils/semaforo.js`, el saldo de `utils/reservas.js` y el formato de los
+montos de `utils/montos.js`, así ninguna pantalla contradice a otra.
+
 ## Semáforo de colores
 
 El calendario usa color para mostrar el estado de cobro de un vistazo:
 
 | Color | Significado |
 |---|---|
-| Celeste | Señada, faltan más de 24 h para el check-in |
-| Amarillo | Señada, faltan 24 h o menos |
+| Celeste | Señada, falta más de un día para el check-in |
+| Amarillo | El check-in es hoy o mañana y queda saldo: hay que cobrar |
 | Verde | Saldo saldado |
-| Rojo | El check-in ya pasó y queda saldo pendiente |
-| Azul oscuro | Finalizada |
+| Rojo | No se cobró nada todavía, o el check-in ya pasó y queda saldo |
+| Gris | Finalizada |
 | Naranja | Abortada |
+
+La definición está en [`src/utils/semaforo.js`](src/utils/semaforo.js), con tests.
 
 ## Notas
 

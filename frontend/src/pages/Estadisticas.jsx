@@ -44,7 +44,7 @@ function Informe({ datos }) {
           <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Ocupación Total</span>
           <div className="mt-2">
             <span className="text-2xl font-black text-slate-800 tracking-tight">{totalReservas}</span>
-            <span className="text-[10px] text-slate-400 font-semibold block mt-1">Reservas del mes</span>
+            <span className="text-[10px] text-slate-400 font-semibold block mt-1">Reservas del mes (sin canceladas)</span>
           </div>
         </div>
       </div>

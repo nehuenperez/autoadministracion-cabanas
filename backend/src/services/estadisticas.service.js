@@ -56,18 +56,24 @@ async function obtenerEstadisticas(mes, anio) {
     ],
   });
 
-  const totalReservas = reservasDelMes.length;
+  // La ocupación cuenta sólo las estadías que se concretan o se van a concretar:
+  // una reserva cancelada no ocupa la cabaña. Su plata cobrada (una seña que
+  // quedó) sí suma en los ingresos, y la cancelación se ve en reservasPorEstado.
+  const ocupan = (reserva) => reserva.estado !== 'Abortada';
+  const totalReservas = reservasDelMes.filter(ocupan).length;
 
   const reservasPorCabana = {};
-  const ingresosPorCabana = {}; 
+  const ingresosPorCabana = {};
 
   for (const reserva of reservasDelMes) {
     if (reserva.Cabana) {
       const nombreCabana = reserva.Cabana.nombre;
-      
+
       // Contamos la cantidad de reservas de la unidad
-      reservasPorCabana[nombreCabana] = (reservasPorCabana[nombreCabana] || 0) + 1;
-      
+      if (ocupan(reserva)) {
+        reservasPorCabana[nombreCabana] = (reservasPorCabana[nombreCabana] || 0) + 1;
+      }
+
       // Lo cobrado de verdad en las reservas del mes (no el montoTotal pactado)
       ingresosPorCabana[nombreCabana] = redondear(
         (ingresosPorCabana[nombreCabana] || 0) + totalCobrado(reserva.Pagos)

@@ -300,4 +300,17 @@ describe('Estadísticas', () => {
     assert.equal(json.reservasPorEstado.Pagada, 1);
     assert.equal(json.reservasPorEstado.Señada, 1);
   });
+
+  it('no cuenta las canceladas como ocupación, pero sí lo que se les cobró', async () => {
+    const { json: cancelada } = await nuevaReserva({ fechaCheckIn: '2031-05-10', fechaCheckOut: '2031-05-12' });
+    await api(`/pagos/reservas/${cancelada.id}`, 'POST', { monto: 20000, metodoPago: 'Efectivo', fecha: '2031-05-01' });
+    await api(`/reservas/${cancelada.id}/abortar`, 'PATCH');
+    await nuevaReserva({ fechaCheckIn: '2031-05-20', fechaCheckOut: '2031-05-22' });
+
+    const { json } = await api('/estadisticas?mes=5&anio=2031');
+    assert.equal(json.totalReservas, 1);
+    assert.deepEqual(json.reservasPorCabana, { 'Estudio familiar': 1 });
+    assert.deepEqual(json.ingresosPorCabana, { 'Estudio familiar': 20000 });
+    assert.equal(json.reservasPorEstado.Abortada, 1);
+  });
 });

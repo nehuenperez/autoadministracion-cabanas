@@ -4,6 +4,7 @@ dotenv.config();
 import app from './src/app.js';
 import { sequelize } from './src/models/index.js';
 import { migrar } from './src/config/migraciones.js';
+import { conectarConReintentos } from './src/config/conexion.js';
 
 const PORT = process.env.PORT || 3000;
 
@@ -18,7 +19,7 @@ if (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 32) {
 
 async function iniciar() {
   try {
-    await sequelize.authenticate();
+    await conectarConReintentos(sequelize);
     console.log('✅ Conexión a la base de datos establecida correctamente.');
 
     // Aplica sólo las migraciones que falten (src/migraciones). Con la base al

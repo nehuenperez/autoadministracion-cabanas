@@ -13,6 +13,7 @@ Visión general del proyecto: [README principal](../README.md)
 - Sequelize ORM sobre PostgreSQL (Supabase)
 - Autenticación JWT + bcrypt
 - Validación de entrada con Zod
+- Migraciones con Umzug
 - Deploy en Render
 
 ## Puesta en marcha
@@ -80,6 +81,9 @@ npm run dev    # desarrollo, con recarga automática
 npm start      # producción
 ```
 
+Al arrancar, el servidor se conecta a la base (con reintentos si no responde de
+entrada), aplica las migraciones pendientes y recién después empieza a atender.
+
 ### Tests
 
 ```bash
@@ -88,8 +92,8 @@ npm test
 
 Hay dos grupos:
 
-- **Sin base**: autenticación, validación de entrada, CORS, cabeceras de seguridad y
-  límite de intentos. Fuerzan una URL de base inexistente.
+- **Sin base**: autenticación, validación de entrada, CORS, cabeceras de seguridad,
+  límite de intentos y reintentos de conexión. Fuerzan una URL de base inexistente.
 - **Con base**: reglas de negocio (disponibilidad, cobros, estados, huéspedes),
   estadísticas y migraciones. Levantan un Postgres real y descartable con los
   binarios de `embedded-postgres`, en una carpeta temporal que se borra al
@@ -101,10 +105,33 @@ En Windows, el Postgres de prueba necesita el runtime de Visual C++. Si falta, l
 tests con base fallan con un mensaje que lo dice: instalá
 *Microsoft Visual C++ Redistributable (x64)*.
 
+## Deploy en Render
+
+| Opción | Valor |
+|---|---|
+| Root Directory | `backend` |
+| Build Command | `npm ci --omit=dev` |
+| Start Command | `npm start` |
+| Health Check Path | `/api/health` |
+
+`--omit=dev` evita instalar las dependencias de desarrollo: entre ellas está
+`embedded-postgres`, que descarga unos 100 MB de binarios de Postgres que sólo usan
+los tests. Las variables de entorno se cargan en *Environment* (ver la tabla de arriba).
+
+En el plan gratuito, Supabase pausa la base tras una semana sin actividad. El workflow
+[`mantener-activo.yml`](../.github/workflows/mantener-activo.yml) consulta
+`/api/health/db` cada dos días para evitarlo, y avisa por mail si falla.
+
 ## Endpoints
 
-Todas las rutas requieren `Authorization: Bearer <token>`, excepto `POST /api/auth/login`
-y `GET /api/health`.
+Todas las rutas requieren `Authorization: Bearer <token>`, excepto el login y los
+chequeos de salud.
+
+### Salud
+```
+GET    /api/health                  el servidor responde
+GET    /api/health/db               el servidor responde y la base también (503 si no)
+```
 
 ### Auth
 ```
@@ -125,19 +152,17 @@ PATCH  /api/reservas/:id/abortar
 ### Huéspedes
 ```
 GET    /api/huespedes/dni/:dni      autocompletado por DNI
-GET    /api/huespedes/:id/historial
 POST   /api/huespedes               crea o actualiza según el DNI
-PATCH  /api/huespedes/:id/notas
-POST   /api/huespedes/reservas/:reservaId/vincular
+POST   /api/huespedes/reservas/:reservaId/vincular   reemplaza los huéspedes de la reserva
 ```
 
 ### Pagos
 ```
-GET    /api/pagos/reservas/:reservaId
-GET    /api/pagos/reservas/:reservaId/saldo
 POST   /api/pagos/reservas/:reservaId
 DELETE /api/pagos/:id
 ```
+
+Los cobros de una reserva y su saldo pendiente vienen incluidos en `GET /api/reservas/:id`.
 
 ### Estadísticas
 ```
@@ -147,7 +172,7 @@ GET    /api/estadisticas?mes=&anio=
 ## Modelo de datos
 
 - **Cabana** — `nombre`, `capacidad`
-- **Huesped** — `nombre`, `apellido`, `dni` (único), `telefono`, `direccion`, `vehiculoModelo`, `vehiculoPatente`, `notasComportamiento`
+- **Huesped** — `nombre`, `apellido`, `dni` (único), `cuil`, `telefono`, `direccion`, `vehiculoModelo`, `vehiculoPatente`, `notasComportamiento`
 - **Reserva** — `cabanaId`, `fechaCheckIn`, `fechaCheckOut`, `montoTotal`, `porcentajeSena`, `montoSena`, `estado`
 - **ReservaHuesped** — vincula reservas con huéspedes, con `rol` (titular / acompañante)
 - **Pago** — `reservaId`, `monto`, `fecha`, `metodoPago`
@@ -161,6 +186,8 @@ GET    /api/estadisticas?mes=&anio=
   en el backend — el frontend nunca la manda.
 - **Estado `Pagada`**: automático, cuando la suma de pagos alcanza el `montoTotal`.
 - **Estado `Finalizada`**: automático, cuando el check-out ya pasó.
+- **Estadísticas**: la ocupación no cuenta las reservas canceladas; lo que se les
+  cobró sí suma en los ingresos.
 - Toda reserva tiene exactamente un titular.
 
 ## Scripts destructivos

@@ -144,9 +144,9 @@ describe('Cobros y estados', () => {
     const { json } = await nuevaReserva();
     await api(`/pagos/reservas/${json.id}`, 'POST', { monto: 30000, metodoPago: 'Transferencia' });
 
-    assert.equal(await estadoDe(json.id), 'Señada');
-    const saldo = await api(`/pagos/reservas/${json.id}/saldo`);
-    assert.equal(saldo.json.saldoPendiente, 70000);
+    const { json: detalle } = await api(`/reservas/${json.id}`);
+    assert.equal(detalle.estado, 'Señada');
+    assert.equal(detalle.saldoPendiente, 70000);
   });
 
   it('completar el total la pasa a Pagada, y borrar un cobro la devuelve a Señada', async () => {
@@ -276,10 +276,14 @@ describe('Huéspedes', () => {
     assert.equal(detalle.Huespeds[0].id, h.id);
   });
 
-  it('las notas de comportamiento se actualizan solas', async () => {
-    const { json: h } = await api('/huespedes', 'POST', ana);
-    const r = await api(`/huespedes/${h.id}/notas`, 'PATCH', { notasComportamiento: 'Dejó todo impecable' });
-    assert.equal(r.json.notasComportamiento, 'Dejó todo impecable');
+  it('las notas de comportamiento se guardan con los datos y una visita nueva no las borra', async () => {
+    const notas = 'Dejó todo impecable. '.repeat(40); // más de 500 caracteres
+    await api('/huespedes', 'POST', { ...ana, notasComportamiento: notas });
+
+    // La próxima visita llega sin notas: las anteriores tienen que seguir ahí
+    const { json: h } = await api('/huespedes', 'POST', { ...ana, telefono: '2664111222' });
+    assert.equal(h.notasComportamiento, notas.trim());
+    assert.equal(h.telefono, '2664111222');
   });
 });
 

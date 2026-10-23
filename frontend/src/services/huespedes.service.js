@@ -20,9 +20,4 @@ async function vincularAReserva(reservaId, huespedes) {
   return data;
 }
 
-async function actualizarNotas(huespedId, notasComportamiento) {
-  const { data } = await api.patch(`/huespedes/${huespedId}/notas`, { notasComportamiento });
-  return data;
-}
-
-export { buscarPorDni, crearHuesped, vincularAReserva, actualizarNotas };
+export { buscarPorDni, crearHuesped, vincularAReserva };

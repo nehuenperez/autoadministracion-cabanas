@@ -3,8 +3,8 @@
  * para un celular argentino es 54 + 9 + característica + número, sin el 0
  * de larga distancia ni el 15. Como los teléfonos se guardan tal como los
  * escribió el huésped ("266 4555666", "0351 15 6123456"), hay que convertirlos:
- * con el número local tal cual, WhatsApp lo leía como internacional y
- * "266..." terminaba siendo un número de Lesoto (+266).
+ * con el número local tal cual, WhatsApp lo lee como internacional y "266..."
+ * termina siendo un número de Lesoto (+266).
  */
 function numeroParaWhatsapp(telefono) {
   const texto = String(telefono ?? '').trim();

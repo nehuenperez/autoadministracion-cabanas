@@ -56,8 +56,8 @@ if (origenesPermitidos.length === 0) {
 // Límite de tamaño del body: evita que alguien mande un JSON gigante para tumbar el proceso.
 app.use(express.json({ limit: '100kb' }));
 
-// Freno de fuerza bruta sobre el login. La contraseña de mamá es la única puerta
-// de entrada al sistema, así que este límite es lo que impide probarla a ciegas.
+// Freno de fuerza bruta sobre el login: la contraseña es la única puerta de
+// entrada al sistema, así que este límite es lo que impide probarla a ciegas.
 const limitadorLogin = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutos
   max: 10, // 10 intentos por IP por ventana

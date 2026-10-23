@@ -16,9 +16,9 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// Si el token venció o es inválido, el backend responde 401. Sin esto la sesión
-// quedaba "a medias": el usuario seguía guardado en localStorage pero ninguna
-// llamada funcionaba. Limpiamos la sesión y mandamos al login.
+// Si el token venció o es inválido, el backend responde 401: se limpia la sesión
+// y se vuelve al login. Si no, la sesión quedaría "a medias", con el usuario
+// guardado en localStorage pero sin que ninguna llamada funcione.
 api.interceptors.response.use(
   (response) => response,
   (error) => {

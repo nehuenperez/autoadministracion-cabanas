@@ -66,19 +66,6 @@ async function crearOActualizarHuesped(datos) {
 }
 
 /**
- * Actualiza únicamente la nota de comportamiento de un huésped (historial).
- */
-async function actualizarNotas(huespedId, notasComportamiento) {
-  const huesped = await Huesped.findByPk(huespedId);
-  if (!huesped) {
-    throw new HuespedError('El huésped no existe', 404);
-  }
-
-  await huesped.update({ notasComportamiento });
-  return huesped;
-}
-
-/**
  * Vincula un grupo de huéspedes (titular + acompañantes) a una reserva existente.
  * Recibe un array como:
  * [{ huespedId: 1, rol: 'titular' }, { huespedId: 2, rol: 'acompañante' }]
@@ -123,24 +110,4 @@ async function vincularHuespedesAReserva(reservaId, huespedesConRol) {
   });
 }
 
-/**
- * Devuelve el historial completo de reservas de un huésped (para ver visitas pasadas).
- */
-async function historialDeHuesped(huespedId) {
-  const huesped = await Huesped.findByPk(huespedId, {
-    include: [{ model: Reserva }],
-  });
-  if (!huesped) {
-    throw new HuespedError('El huésped no existe', 404);
-  }
-  return huesped;
-}
-
-export {
-  HuespedError,
-  buscarPorDni,
-  crearOActualizarHuesped,
-  actualizarNotas,
-  vincularHuespedesAReserva,
-  historialDeHuesped,
-};
+export { HuespedError, buscarPorDni, crearOActualizarHuesped, vincularHuespedesAReserva };

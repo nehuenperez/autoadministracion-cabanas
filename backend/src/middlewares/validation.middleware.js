@@ -5,15 +5,14 @@ import { z } from 'zod';
  *
  * Dos motivos para que esto exista:
  *
- * 1. Seguridad. Los controladores pasaban `req.body` crudo a los servicios y de
- *    ahí a Sequelize. Sin una lista explícita de campos permitidos, un cliente
- *    podía mandar propiedades de más y escribir columnas que no le corresponden
+ * 1. Seguridad. Sin una lista explícita de campos permitidos, un cliente podría
+ *    mandar propiedades de más y escribir columnas que no le corresponden
  *    (mass assignment). Los esquemas de acá descartan todo lo que no esté
- *    declarado.
+ *    declarado antes de que llegue a los servicios.
  *
- * 2. Mensajes de error claros. Antes, un dato con el tipo equivocado llegaba
- *    hasta la base y volvía como un 500 genérico. Ahora se corta en la puerta
- *    con un 400 que dice qué campo está mal.
+ * 2. Mensajes de error claros. Un dato con el tipo equivocado se corta en la
+ *    puerta con un 400 que dice qué campo está mal, en lugar de llegar a la
+ *    base y volver como un 500 genérico.
  */
 
 // ── Helpers ────────────────────────────────────────────────────────────────
@@ -90,11 +89,7 @@ const esquemas = {
     direccion: textoOpcional,
     vehiculoModelo: textoOpcional,
     vehiculoPatente: textoOpcional,
-    notasComportamiento: textoOpcional,
-  }),
-
-  actualizarNotas: z.object({
-    notasComportamiento: z.string().trim().max(2000).nullable(),
+    notasComportamiento: z.string().trim().max(2000).optional().nullable(),
   }),
 
   vincularHuespedes: z.object({

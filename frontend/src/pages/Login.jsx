@@ -19,8 +19,8 @@ export default function Login() {
     if (err.response) {
       return err.response.data?.error || 'Usuario o contraseña incorrectos';
     }
-    // No hubo respuesta: es un problema de red o el server tardó demasiado.
-    // Antes esto también decía "usuario o contraseña incorrectos", que confundía.
+    // No hubo respuesta: es un problema de red o el servidor tardó demasiado,
+    // no un error de credenciales, y el mensaje lo tiene que dejar claro.
     if (err.code === 'ECONNABORTED') {
       return 'El servidor tardó demasiado en responder. Esperá unos segundos y probá de nuevo.';
     }

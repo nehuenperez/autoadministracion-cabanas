@@ -49,8 +49,8 @@ async function registrarPago(reservaId, datos) {
     reservaId,
     monto,
     metodoPago,
-    // Fecha de Argentina: con la del servidor (UTC), un cobro de las 22 h
-    // quedaba con fecha de mañana y a fin de mes sumaba en el mes siguiente.
+    // Fecha de Argentina, no la del servidor (UTC): si no, un cobro de las 22 h
+    // quedaría con fecha de mañana y a fin de mes sumaría en el mes siguiente.
     fecha: fecha || fechaDeHoy(),
   });
 
@@ -59,10 +59,7 @@ async function registrarPago(reservaId, datos) {
   return pago;
 }
 
-/**
- * Calcula el saldo pendiente de una reserva: montoTotal - suma de todos los pagos.
- * Esta es la función que el frontend va a usar para el semáforo de colores.
- */
+/** Saldo pendiente de una reserva: el monto total menos la suma de sus cobros. */
 async function calcularSaldoPendiente(reservaId) {
   const reserva = await Reserva.findByPk(reservaId, { include: [{ model: Pago }] });
   if (!reserva) {
@@ -70,14 +67,6 @@ async function calcularSaldoPendiente(reservaId) {
   }
 
   return saldoPendiente(reserva.montoTotal, reserva.Pagos);
-}
-
-async function listarPagosDeReserva(reservaId) {
-  const reserva = await Reserva.findByPk(reservaId);
-  if (!reserva) {
-    throw new PagoError('La reserva no existe', 404);
-  }
-  return Pago.findAll({ where: { reservaId }, order: [['fecha', 'ASC']] });
 }
 
 /**
@@ -101,8 +90,6 @@ async function removerPago(id) {
 export {
   PagoError,
   registrarPago,
-  calcularSaldoPendiente,
-  listarPagosDeReserva,
   removerPago,
   sincronizarEstadoConSaldo,
 };

@@ -28,6 +28,8 @@ cp .env.example .env
 npm run dev      # desarrollo
 npm run build    # build de producción
 npm run preview  # previsualizar el build
+npm test         # tests de la lógica (node:test, sin dependencias extra)
+npm run lint     # ESLint
 ```
 
 El backend tiene que estar corriendo y hay que tener un usuario creado
@@ -40,7 +42,7 @@ El backend tiene que estar corriendo y hay que tener un usuario creado
 | `/login` | Ingreso |
 | `/` | Calendario mensual con las reservas activas |
 | `/reservas/nueva` | Alta de reserva |
-| `/reservas/:id` | Detalle: huéspedes, cobros, saldo. Fechas y montos se editan desde acá |
+| `/reservas/:id` | Detalle: huéspedes, cobros y saldo. Desde acá se editan fechas y montos, se cargan los huéspedes y se contacta al titular por WhatsApp |
 | `/reservas-anteriores` | Historial |
 | `/estadisticas` | Ingresos y ocupación por mes |
 
@@ -56,10 +58,11 @@ src/
 │   ├── comunes/    Tarjeta, Aviso, CampoMonto, SelectorDeMes, MensajeFlotante...
 │   ├── calendario/ calendario mensual con la agenda del día
 │   ├── detalle/    las tarjetas del detalle de una reserva
-│   └── reservas/   formulario de alta, selector de fechas, carga de huéspedes
+│   └── reservas/   formulario de alta, selector de fechas, carga rápida y manual de huéspedes
 ├── hooks/          useAuth, useDatos (carga de datos de una pantalla)
 ├── services/       llamadas a la API, una por endpoint
-└── utils/          lógica pura y con tests: semáforo, fechas, montos, reservas
+└── utils/          lógica pura y con tests: semáforo, fechas, montos, reservas,
+                    intérprete de mensajes y link de WhatsApp
 ```
 
 La regla: las pantallas no calculan nada por su cuenta. El color de una reserva sale
@@ -80,6 +83,25 @@ El calendario usa color para mostrar el estado de cobro de un vistazo:
 | Naranja | Abortada |
 
 La definición está en [`src/utils/semaforo.js`](src/utils/semaforo.js), con tests.
+
+## Carga rápida de huéspedes
+
+En el detalle de una reserva se puede pegar el mensaje con los datos que mandó el
+cliente. [`utils/interpretarMensaje.js`](src/utils/interpretarMensaje.js) lo convierte
+en una lista de huéspedes (titular y acompañantes) con nombre, apellido, DNI, CUIL,
+teléfono, domicilio, vehículo y patente. Funciona sin IA ni servicios externos: son
+reglas sobre los formatos argentinos, con tests sobre mensajes en distintos formatos.
+
+El resultado se muestra en tarjetas editables, con avisos sobre lo que falta o no
+cierra (por ejemplo, un CUIL que no corresponde al DNI). Si un huésped ya vino, se
+completan los datos que el mensaje no trajo y se muestran sus notas. Nada se guarda
+sin confirmar.
+
+## WhatsApp
+
+Los teléfonos se guardan como los escribió el huésped. Para abrir el chat,
+[`utils/whatsapp.js`](src/utils/whatsapp.js) los convierte al formato internacional
+que exige `wa.me` (`549` + característica + número, sin el 0 ni el 15).
 
 ## Notas
 

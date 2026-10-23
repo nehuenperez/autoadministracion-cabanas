@@ -10,8 +10,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
  * otra reserva), `cargando` vuelve a true hasta que llegan los datos nuevos.
  *
  * `recargar()` vuelve a pedir los datos sin pasar por `cargando`: la pantalla
- * queda donde estaba y se actualiza sola. Antes, cada cobro registrado
- * mostraba la pantalla de carga y el celular volvía arriba de todo.
+ * queda donde estaba y se actualiza sola, sin mostrar la pantalla de carga ni
+ * volver arriba de todo después de, por ejemplo, registrar un cobro.
  */
 function useDatos(cargar) {
   // `para` recuerda qué función trajo los datos: si no es la actual, todavía se está cargando

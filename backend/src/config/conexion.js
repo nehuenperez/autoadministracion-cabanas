@@ -1,11 +1,11 @@
 /**
  * Conexión a la base al arrancar, con reintentos.
  *
- * Antes, si el primer intento fallaba (un corte de red, la base tardando en
- * responder después de estar inactiva), el servidor se cerraba en el acto y
- * Render lo daba por caído. Ahora espera y vuelve a probar, cada vez un poco
- * más, y sólo se rinde si la base sigue sin responder después de todos los
- * intentos (alrededor de un minuto y medio con los valores por defecto).
+ * Una falla pasajera (un corte de red, la base tardando en responder después
+ * de estar inactiva) no debe cerrar el servidor: si se cerrara, Render lo daría
+ * por caído. Se espera y se vuelve a probar, cada vez un poco más, y sólo se
+ * abandona si la base sigue sin responder después de todos los intentos
+ * (alrededor de un minuto y medio con los valores por defecto).
  */
 
 const ESPERAS_POR_DEFECTO = [2000, 4000, 8000, 15000, 30000, 30000];

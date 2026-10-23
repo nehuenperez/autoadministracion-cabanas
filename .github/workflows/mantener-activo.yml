@@ -1,0 +1,33 @@
+# Mantiene viva la base de datos y avisa si el backend se cae.
+#
+# Supabase (plan gratis) pausa la base después de una semana sin actividad, y
+# con la base pausada el backend de Render no puede arrancar. Cada dos días este
+# workflow consulta /api/health/db: la consulta cuenta como actividad, así que
+# la base no llega a pausarse. Si el chequeo falla, el workflow queda en rojo y
+# GitHub manda un mail: es la alarma de que hay que revisar Render o Supabase.
+#
+# Se puede correr a mano desde la pestaña Actions del repositorio.
+name: Mantener activo el backend
+
+on:
+  schedule:
+    - cron: '0 13 */2 * *' # 10 h de Argentina, cada dos días
+  workflow_dispatch:
+
+jobs:
+  chequear:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Consultar el backend y la base
+        run: |
+          # Render (plan gratis) apaga el servidor sin uso y tarda hasta un
+          # minuto en despertar: se dan varios intentos con tiempo de sobra.
+          for intento in 1 2 3; do
+            codigo=$(curl -s -m 120 -o respuesta.json -w '%{http_code}' https://cabanas-backend-09ce.onrender.com/api/health/db || true)
+            echo "Intento $intento: HTTP $codigo $(cat respuesta.json 2>/dev/null)"
+            if [ "$codigo" = "200" ]; then exit 0; fi
+            sleep 30
+          done
+          echo "::error::El backend o la base no responden. Revisá Render y Supabase."
+          exit 1

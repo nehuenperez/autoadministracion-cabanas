@@ -283,6 +283,14 @@ describe('Huéspedes', () => {
   });
 });
 
+describe('Chequeo de salud con base', () => {
+  it('/api/health/db responde ok sin token cuando la base contesta', async () => {
+    const r = await pedir('/api/health/db');
+    assert.equal(r.status, 200);
+    assert.deepEqual(r.json, { status: 'ok', base: 'ok' });
+  });
+});
+
 describe('Estadísticas', () => {
   it('suma la caja por fecha de cobro y el rendimiento por cabaña', async () => {
     const { json: marzo } = await nuevaReserva();

@@ -9,6 +9,7 @@ import huespedesRoutes from './routes/huespedes.routes.js';
 import pagosRoutes from './routes/pagos.routes.js';
 import estadisticasRoutes from './routes/estadisticas.routes.js';
 import { manejadorDeErrores } from './middlewares/error.middleware.js';
+import sequelize from './config/database.js';
 
 const app = express();
 
@@ -67,6 +68,22 @@ const limitadorLogin = rateLimit({
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', mensaje: 'Backend funcionando' });
+});
+
+/**
+ * Como /api/health, pero además consulta la base. Lo llama el workflow
+ * .github/workflows/mantener-activo.yml cada dos días: Supabase (plan gratis)
+ * pausa la base tras una semana sin actividad y, pausada, el backend no
+ * arranca. La consulta cuenta como actividad, y si falla el workflow avisa.
+ */
+app.get('/api/health/db', async (req, res) => {
+  try {
+    await sequelize.query('SELECT 1');
+    res.json({ status: 'ok', base: 'ok' });
+  } catch (error) {
+    console.error('Chequeo de la base falló:', error.message);
+    res.status(503).json({ status: 'error', base: 'sin conexión' });
+  }
 });
 
 app.use('/api/auth/login', limitadorLogin);

@@ -112,4 +112,11 @@ describe('Rutas públicas', () => {
     assert.equal(r.status, 200);
     assert.equal(r.json.status, 'ok');
   });
+
+  it('/api/health/db responde 503 sin detalles internos si la base no contesta', async () => {
+    // En este entorno de test la base apunta a un puerto cerrado a propósito
+    const r = await pedir('/api/health/db');
+    assert.equal(r.status, 503);
+    assert.deepEqual(r.json, { status: 'error', base: 'sin conexión' });
+  });
 });

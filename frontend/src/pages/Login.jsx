@@ -1,6 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
+import { LogIn } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth.js';
+import { claseDeCampo } from '../utils/estilos.js';
+import Campo from '../components/comunes/Campo.jsx';
+import Boton from '../components/comunes/Boton.jsx';
+import Aviso from '../components/comunes/Aviso.jsx';
 
 export default function Login() {
   const navigate = useNavigate();
@@ -57,70 +62,48 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] flex flex-col justify-center px-4 antialiased">
-      <div className="max-w-sm w-full mx-auto bg-white rounded-2xl p-6 border border-slate-200/70 shadow-xs space-y-6">
-        
-        {/* Encabezado del Login */}
-        <div className="text-center space-y-1">
-          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">Acceso al Sistema</span>
-          <h1 className="text-xl font-black text-slate-900 tracking-tight">Cabañas Aroma del potrero</h1>
-          <p className="text-[11px] text-slate-400 font-medium">Ingresá las credenciales para administrar</p>
+    <div className="min-h-screen bg-slate-50 flex flex-col justify-center px-4 py-10">
+      <div className="max-w-sm w-full mx-auto space-y-8">
+        <div className="text-center space-y-3">
+          <img src="/favicon.svg" alt="" className="size-14 mx-auto" />
+          <div className="space-y-1">
+            <h1 className="text-2xl font-bold text-slate-900">Aroma del Potrero</h1>
+            <p className="text-[15px] text-slate-500">Ingresá para administrar las reservas</p>
+          </div>
         </div>
 
-        {/* Formulario Táctil */}
-        <form onSubmit={handleSubmit} className="space-y-4">
-          
-          {/* Campo Usuario */}
-          <div>
-            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
-              Usuario
-            </label>
+        <form onSubmit={handleSubmit} className="bg-white rounded-2xl border border-slate-200 p-5 space-y-4">
+          <Campo rotulo="Usuario">
             <input
               type="text"
-              placeholder="Ej: Mama"
+              autoComplete="username"
+              autoCapitalize="none"
               value={usuario}
               onChange={(e) => setUsuario(e.target.value)}
               required
-              className="w-full p-3 text-sm font-medium border border-slate-200 rounded-xl bg-slate-50/50 focus:outline-hidden focus:ring-2 focus:ring-blue-600/10 focus:border-blue-500 transition text-slate-800"
+              className={claseDeCampo}
             />
-          </div>
+          </Campo>
 
-          {/* Campo Contraseña */}
-          <div>
-            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
-              Contraseña
-            </label>
+          <Campo rotulo="Contraseña">
             <input
               type="password"
-              placeholder="••••••••"
+              autoComplete="current-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
-              className="w-full p-3 text-sm font-medium border border-slate-200 rounded-xl bg-slate-50/50 focus:outline-hidden focus:ring-2 focus:ring-blue-600/10 focus:border-blue-500 transition text-slate-800"
+              className={claseDeCampo}
             />
-          </div>
+          </Campo>
 
-          {error && (
-            <div className="p-2.5 bg-rose-50 border border-rose-100 rounded-lg text-center text-xs font-semibold text-rose-600 animate-aparecer">
-              {error}
-            </div>
-          )}
-
+          <Aviso>{error}</Aviso>
           {demorado && !error && (
-            <div className="p-2.5 bg-amber-50 border border-amber-100 rounded-lg text-center text-xs font-semibold text-amber-700 animate-aparecer">
-              Encendiendo el servidor, puede tardar hasta un minuto. No cierres la página.
-            </div>
+            <Aviso tipo="info">El servidor se está encendiendo y puede tardar hasta un minuto. No cierres la página.</Aviso>
           )}
 
-          {/* Botón de Ingreso Principal */}
-          <button
-            type="submit"
-            disabled={cargando}
-            className="w-full bg-slate-900 hover:bg-slate-800 active:scale-[0.995] text-white p-3.5 rounded-xl font-bold transition text-xs shadow-xs tracking-wide uppercase disabled:bg-slate-300 cursor-pointer mt-2"
-          >
-            {cargando ? (demorado ? 'Conectando...' : 'Ingresando...') : 'Ingresar'}
-          </button>
-
+          <Boton type="submit" ancho icono={LogIn} disabled={cargando}>
+            {cargando ? (demorado ? 'Conectando…' : 'Ingresando…') : 'Ingresar'}
+          </Boton>
         </form>
       </div>
     </div>

@@ -30,8 +30,10 @@ del DNI, e interpreta el mensaje del huésped para cargar todos sus datos de una
 
 ## Funcionalidades
 
+- **Resumen del día** al abrir la app: quién entra y quién sale hoy y mañana en todas
+  las cabañas, y a quién falta cobrarle.
 - **Calendario mensual** por cabaña, con el estado de cobro de cada reserva por color y
-  la agenda del día: quién entra y quién sale.
+  la agenda del día elegido.
 - **Alta de reservas** con validación de disponibilidad, cálculo de seña y opción de
   extender una estadía con el mismo titular.
 - **Carga rápida de huéspedes:** se pega el mensaje que mandó el cliente y el sistema
@@ -198,7 +200,7 @@ de darse por vencido, para que una falla pasajera no lo deje caído.
 
 ```bash
 cd backend && npm test    # 122 tests
-cd frontend && npm test   # 52 tests
+cd frontend && npm test   # 56 tests
 ```
 
 **Backend.** Dos grupos. Sin base: autenticación, validación de entrada, CORS,

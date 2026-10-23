@@ -1,18 +1,31 @@
 import { useState } from 'react';
 import { calcularSena, formatearMonto, formatearNumero, parsearMonto } from '../../utils/montos.js';
 import { saldoPendiente, totalCobrado } from '../../utils/reservas.js';
+import { claseDeCampo } from '../../utils/estilos.js';
 import Tarjeta, { BotonEditar } from '../comunes/Tarjeta.jsx';
+import Campo from '../comunes/Campo.jsx';
 import CampoMonto from '../comunes/CampoMonto.jsx';
-import BotonWhatsapp from '../reservas/BotonWhatsapp.jsx';
+import Boton from '../comunes/Boton.jsx';
+
+function Renglon({ rotulo, valor, destacado = false }) {
+  return (
+    <div className="flex justify-between items-baseline gap-3 py-1.5">
+      <dt className="text-[15px] text-slate-600">{rotulo}</dt>
+      <dd className={`text-[15px] tabular-nums ${destacado ? 'font-semibold text-emerald-700' : 'font-medium text-slate-900'}`}>{valor}</dd>
+    </div>
+  );
+}
 
 /**
  * Total, seña, cobrado y saldo. La seña se edita como porcentaje: el backend
  * calcula el monto (y descarta un monto de seña que venga del cliente).
  */
-export default function EstadoDeCuentas({ reserva, titular, ocupado, onGuardarMontos }) {
+export default function EstadoDeCuentas({ reserva, ocupado, onGuardarMontos }) {
   const [form, setForm] = useState(null); // null = no se está editando
+  const total = Number(reserva.montoTotal) || 0;
   const cobrado = totalCobrado(reserva);
   const saldo = saldoPendiente(reserva);
+  const porcentajeCobrado = total > 0 ? Math.min(100, (cobrado / total) * 100) : 100;
 
   function empezarEdicion() {
     setForm({
@@ -31,75 +44,67 @@ export default function EstadoDeCuentas({ reserva, titular, ocupado, onGuardarMo
 
   return (
     <Tarjeta
-      titulo="Estado de Cuentas"
-      accion={!form && reserva.estado !== 'Abortada' && <BotonEditar onClick={empezarEdicion}>⚙️ Editar montos</BotonEditar>}
-      className="space-y-4"
+      titulo="Cuentas"
+      accion={!form && reserva.estado !== 'Abortada' && <BotonEditar onClick={empezarEdicion}>Cambiar montos</BotonEditar>}
     >
       {form ? (
-        <div className="space-y-3 pt-1">
-          <div className="grid grid-cols-2 gap-3 text-xs">
-            <label className="space-y-1">
-              <span className="font-bold text-slate-500">Monto Total ($)</span>
-              <CampoMonto value={form.montoTotal} onChange={(montoTotal) => setForm({ ...form, montoTotal })} className="p-2.5 text-xs font-bold" />
-            </label>
-            <label className="space-y-1">
-              <span className="font-bold text-slate-500">Seña (%)</span>
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-3">
+            <Campo rotulo="Total">
+              <CampoMonto value={form.montoTotal} onChange={(montoTotal) => setForm({ ...form, montoTotal })} />
+            </Campo>
+            <Campo rotulo="Seña (%)">
               <input
                 type="number"
+                inputMode="decimal"
                 min="0"
                 max="100"
                 step="0.01"
                 value={form.porcentajeSena}
                 onChange={(e) => setForm({ ...form, porcentajeSena: e.target.value })}
-                className="w-full p-2.5 border border-slate-200 rounded-xl bg-slate-50/50 font-bold text-slate-800 focus:border-blue-500 focus:outline-hidden"
+                className={claseDeCampo}
               />
-            </label>
+            </Campo>
           </div>
-          <p className="text-[11px] font-medium text-slate-500">
-            Seña requerida:{' '}
-            <span className="font-bold text-slate-800">
-              {formatearMonto(calcularSena(parsearMonto(form.montoTotal), form.porcentajeSena))}
-            </span>
+          <p className="text-[15px] text-slate-600">
+            Seña: <span className="font-semibold text-slate-900 tabular-nums">{formatearMonto(calcularSena(parsearMonto(form.montoTotal), form.porcentajeSena))}</span>
           </p>
-          <div className="flex gap-2 text-xs font-bold pt-1.5">
-            <button type="button" onClick={guardar} disabled={ocupado} className="flex-1 bg-emerald-600 text-white p-2 rounded-xl cursor-pointer shadow-xs disabled:bg-slate-300">
-              Guardar Montos
-            </button>
-            <button type="button" onClick={() => setForm(null)} className="bg-slate-100 text-slate-600 border border-slate-200 px-3 py-2 rounded-xl cursor-pointer">
-              Cancelar
-            </button>
+          <div className="flex gap-2">
+            <Boton ancho onClick={guardar} disabled={ocupado}>Guardar montos</Boton>
+            <Boton variante="secundario" onClick={() => setForm(null)}>Cancelar</Boton>
           </div>
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-2 gap-4 text-xs font-medium border-b border-slate-100 pb-3">
-            <div>
-              <span className="text-slate-400 block mb-0.5">Monto Total</span>
-              <span className="text-base font-bold text-slate-900">{formatearMonto(reserva.montoTotal)}</span>
-            </div>
-            <div>
-              <span className="text-slate-400 block mb-0.5">Seña Requerida</span>
-              <span className="text-base font-bold text-slate-700">{formatearMonto(reserva.montoSena)}</span>
+          <div className="space-y-2">
+            {saldo > 0 ? (
+              <p className="text-sm text-slate-500">
+                Falta cobrar
+                <span className="block text-3xl font-bold text-rose-700 tabular-nums">{formatearMonto(saldo)}</span>
+              </p>
+            ) : (
+              <p className="text-xl font-semibold text-emerald-700">Pagada en su totalidad</p>
+            )}
+            <div
+              className="h-2 bg-slate-100 rounded-full overflow-hidden"
+              role="progressbar"
+              aria-label="Cobrado del total"
+              aria-valuenow={Math.round(porcentajeCobrado)}
+              aria-valuemin={0}
+              aria-valuemax={100}
+            >
+              <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${porcentajeCobrado}%` }} />
             </div>
           </div>
-          <div className="flex justify-between items-center text-xs">
-            <div>
-              <span className="text-slate-400 block mb-0.5">Pagado hasta hoy</span>
-              <span className="text-sm font-bold text-emerald-600">{formatearMonto(cobrado)}</span>
-            </div>
-            <div className="text-right">
-              <span className="text-slate-400 block mb-0.5">Saldo Pendiente</span>
-              <span className={`text-base font-black ${saldo <= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>{formatearMonto(saldo)}</span>
-            </div>
-          </div>
+          <dl className="divide-y divide-slate-100">
+            <Renglon rotulo="Total de la estadía" valor={formatearMonto(reserva.montoTotal)} />
+            <Renglon
+              rotulo={Number(reserva.porcentajeSena) > 0 ? `Seña (${Number(reserva.porcentajeSena)}%)` : 'Seña'}
+              valor={Number(reserva.montoSena) > 0 ? formatearMonto(reserva.montoSena) : 'Sin seña'}
+            />
+            <Renglon rotulo="Cobrado" valor={formatearMonto(cobrado)} destacado />
+          </dl>
         </>
-      )}
-
-      {titular?.telefono && (
-        <BotonWhatsapp
-          telefono={titular.telefono}
-          mensaje={`Hola, *${titular.nombre}* 😊\n¡Los esperamos pronto en Aroma del Potrero 🌿!\n\nLes recordamos algunos detalles previos a su llegada:\n...`}
-        />
       )}
     </Tarjeta>
   );

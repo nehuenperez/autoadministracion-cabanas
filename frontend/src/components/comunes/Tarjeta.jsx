@@ -1,13 +1,16 @@
+import { Pencil } from 'lucide-react';
+import Boton from './Boton.jsx';
+
 /**
- * La tarjeta blanca de cada bloque. `titulo` es el rótulo gris de arriba y
- * `accion` un botón a su derecha (por ejemplo, "Editar").
+ * Un bloque de contenido. `titulo` va arriba a la izquierda y `accion` (por
+ * ejemplo, el botón Editar) a su derecha.
  */
 export default function Tarjeta({ titulo, accion, className = '', children }) {
   return (
-    <section className={`bg-white rounded-xl p-5 shadow-xs border border-slate-200/70 space-y-3 ${className}`}>
+    <section className={`bg-white rounded-2xl border border-slate-200 p-4 space-y-4 ${className}`}>
       {(titulo || accion) && (
-        <div className="flex justify-between items-center gap-2 border-b border-slate-100 pb-2">
-          {titulo && <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">{titulo}</h3>}
+        <div className="flex justify-between items-center gap-3 min-h-11">
+          {titulo && <h2 className="text-base font-semibold text-slate-900">{titulo}</h2>}
           {accion}
         </div>
       )}
@@ -16,15 +19,11 @@ export default function Tarjeta({ titulo, accion, className = '', children }) {
   );
 }
 
-/** El botón chico de "Editar" que va en el rótulo de una tarjeta. */
+/** El botón "Editar" que va en el encabezado de una tarjeta. */
 export function BotonEditar({ onClick, children = 'Editar' }) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="text-[11px] font-bold text-blue-600 bg-blue-50 border border-blue-100 px-2.5 py-1 rounded-lg cursor-pointer"
-    >
+    <Boton variante="fantasma" tamano="chico" icono={Pencil} onClick={onClick} className="-mr-2 text-blue-700">
       {children}
-    </button>
+    </Boton>
   );
 }

@@ -55,6 +55,26 @@ function formatearRango(checkIn, checkOut) {
   return `Del ${diaIn} de ${NOMBRES_MESES[mesIn - 1]} al ${diaOut} de ${NOMBRES_MESES[mesOut - 1]}`;
 }
 
+const NOMBRES_DIAS = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+
+/** '2026-10-23' → 'viernes 23 de octubre' */
+function formatearDia(texto) {
+  const fecha = deISO(texto);
+  return `${NOMBRES_DIAS[fecha.getDay()]} ${fecha.getDate()} de ${NOMBRES_MESES[fecha.getMonth()].toLowerCase()}`;
+}
+
+/** '2026-10-21' → 'mié 21 oct' */
+function formatearDiaCorto(texto) {
+  const fecha = deISO(texto);
+  return `${NOMBRES_DIAS[fecha.getDay()].slice(0, 3)} ${fecha.getDate()} ${NOMBRES_MESES[fecha.getMonth()].slice(0, 3).toLowerCase()}`;
+}
+
+/** Noches entre el check-in y el check-out: '4 noches', '1 noche'. */
+function formatearNoches(checkIn, checkOut) {
+  const noches = diasEntre(checkIn, checkOut);
+  return `${noches} ${noches === 1 ? 'noche' : 'noches'}`;
+}
+
 /**
  * Las celdas de un mes para una grilla que arranca el lunes: primero `null`
  * por cada día vacío antes del 1, después cada fecha 'AAAA-MM-DD'.
@@ -69,4 +89,17 @@ function diasDelMes(anio, mes) {
   ];
 }
 
-export { NOMBRES_MESES, aISO, deISO, hoyISO, sumarDias, diasEntre, formatearFecha, formatearRango, diasDelMes };
+export {
+  NOMBRES_MESES,
+  aISO,
+  deISO,
+  hoyISO,
+  sumarDias,
+  diasEntre,
+  formatearFecha,
+  formatearRango,
+  formatearDia,
+  formatearDiaCorto,
+  formatearNoches,
+  diasDelMes,
+};

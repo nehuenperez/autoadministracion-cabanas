@@ -1,7 +1,9 @@
+import { MessageCircle } from 'lucide-react';
 import { armarLinkWhatsapp } from '../../utils/whatsapp.js';
+import { clasesDeBoton } from '../../utils/estilos.js';
 
 /** Abre WhatsApp con el mensaje ya escrito para el número del huésped. */
-export default function BotonWhatsapp({ telefono, mensaje }) {
+export default function BotonWhatsapp({ telefono, mensaje, className = '' }) {
   if (!telefono) return null;
 
   return (
@@ -9,8 +11,9 @@ export default function BotonWhatsapp({ telefono, mensaje }) {
       href={armarLinkWhatsapp(telefono, mensaje)}
       target="_blank"
       rel="noopener noreferrer"
-      className="inline-flex items-center gap-1.5 bg-[#25D366] hover:bg-[#1ebe5b] text-white text-sm font-bold px-4 py-2.5 rounded-xl shadow-xs transition"
+      className={clasesDeBoton({ variante: 'whatsapp', className })}
     >
+      <MessageCircle className="size-5" aria-hidden="true" />
       WhatsApp
     </a>
   );

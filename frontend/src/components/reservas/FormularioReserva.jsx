@@ -1,13 +1,28 @@
 import { useState } from 'react';
-import { formatearFecha } from '../../utils/fechas.js';
+import { ArrowRight } from 'lucide-react';
+import { formatearDiaCorto, formatearNoches } from '../../utils/fechas.js';
 import { calcularSena, formatearMonto, parsearMonto } from '../../utils/montos.js';
+import { claseDeCampo } from '../../utils/estilos.js';
+import Campo from '../comunes/Campo.jsx';
 import CampoMonto from '../comunes/CampoMonto.jsx';
+import ControlSegmentado from '../comunes/ControlSegmentado.jsx';
 import Aviso from '../comunes/Aviso.jsx';
+import Boton from '../comunes/Boton.jsx';
 import SelectorDeFechas from './SelectorDeFechas.jsx';
 
-const rotulo = 'block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5';
-const campo =
-  'w-full p-3 text-sm font-medium border border-slate-200 rounded-xl bg-slate-50/50 focus:outline-hidden focus:ring-2 focus:ring-blue-600/10 focus:border-blue-500 transition';
+function ResumenDeFechas({ checkIn, checkOut }) {
+  if (!checkIn) return <p className="text-[15px] text-slate-500">Elegí las fechas en el calendario.</p>;
+  return (
+    <div className="flex items-center gap-2 text-[15px] font-semibold text-slate-900">
+      <span className="inline-block first-letter:uppercase">{formatearDiaCorto(checkIn)}</span>
+      <ArrowRight className="size-4 text-slate-400" aria-hidden="true" />
+      <span className={checkOut ? 'inline-block first-letter:uppercase' : 'text-slate-400 font-normal'}>
+        {checkOut ? formatearDiaCorto(checkOut) : 'salida'}
+      </span>
+      {checkOut && <span className="text-slate-500 font-normal">({formatearNoches(checkIn, checkOut)})</span>}
+    </div>
+  );
+}
 
 /**
  * Alta de reserva: cabaña, estadía, total y porcentaje de seña.
@@ -16,13 +31,12 @@ const campo =
  */
 export default function FormularioReserva({ cabanas, reservasActivas, inicial = {}, onSubmit, cargando, error }) {
   const [form, setForm] = useState({
-    cabanaId: inicial.cabanaId ? String(inicial.cabanaId) : '',
+    cabanaId: inicial.cabanaId ? String(inicial.cabanaId) : cabanas.length === 1 ? String(cabanas[0].id) : '',
     fechaCheckIn: inicial.fechaCheckIn || '',
     fechaCheckOut: '',
     montoTotal: '',
     porcentajeSena: '',
   });
-  const [mostrarCalendario, setMostrarCalendario] = useState(Boolean(inicial.fechaCheckIn));
   const [errorLocal, setErrorLocal] = useState('');
 
   const actualizar = (cambios) => setForm((anterior) => ({ ...anterior, ...cambios }));
@@ -31,9 +45,16 @@ export default function FormularioReserva({ cabanas, reservasActivas, inicial = 
 
   function handleSubmit(e) {
     e.preventDefault();
+    if (!form.cabanaId) {
+      setErrorLocal('Elegí la cabaña.');
+      return;
+    }
     if (!form.fechaCheckIn || !form.fechaCheckOut) {
-      setErrorLocal('Elegí en el calendario el día de ingreso y el de egreso.');
-      setMostrarCalendario(true);
+      setErrorLocal('Elegí en el calendario el día de ingreso y el de salida.');
+      return;
+    }
+    if (parsearMonto(form.montoTotal) <= 0) {
+      setErrorLocal('Ingresá el total de la estadía.');
       return;
     }
     onSubmit({
@@ -46,96 +67,61 @@ export default function FormularioReserva({ cabanas, reservasActivas, inicial = 
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div>
-        <label className={rotulo}>Cabaña Seleccionada</label>
-        <select
-          value={form.cabanaId}
-          onChange={(e) => {
+    <form onSubmit={handleSubmit} className="space-y-5" noValidate>
+      <Campo rotulo="Cabaña" grupo>
+        <ControlSegmentado
+          etiqueta="Cabaña"
+          opciones={cabanas.map((c) => ({ valor: String(c.id), texto: c.nombre }))}
+          valor={form.cabanaId}
+          onCambiar={(cabanaId) => {
             // Otra cabaña tiene otros días ocupados: las fechas elegidas dejan de valer
-            actualizar({ cabanaId: e.target.value, fechaCheckIn: '', fechaCheckOut: '' });
+            actualizar({ cabanaId, fechaCheckIn: '', fechaCheckOut: '' });
             setErrorLocal('');
           }}
-          required
-          className={campo}
-        >
-          <option value="">Seleccionar cabaña...</option>
-          {cabanas.map((c) => (
-            <option key={c.id} value={c.id}>{c.nombre}</option>
-          ))}
-        </select>
-      </div>
-
-      <div>
-        <label className={rotulo}>Período de Estadía</label>
-        <button
-          type="button"
-          disabled={!form.cabanaId}
-          onClick={() => setMostrarCalendario(!mostrarCalendario)}
-          className="w-full grid grid-cols-2 gap-2 text-left p-3 border border-slate-200 rounded-xl bg-slate-50/50 focus:outline-hidden disabled:opacity-50 transition cursor-pointer min-h-12"
-        >
-          <div>
-            <span className="text-[9px] text-slate-400 uppercase font-bold block">Ingreso</span>
-            <span className="text-xs font-bold text-slate-700">{formatearFecha(form.fechaCheckIn)}</span>
-          </div>
-          <div className="border-l border-slate-200 pl-3">
-            <span className="text-[9px] text-slate-400 uppercase font-bold block">Egreso</span>
-            <span className="text-xs font-bold text-slate-700">{formatearFecha(form.fechaCheckOut)}</span>
-          </div>
-        </button>
-      </div>
-
-      {mostrarCalendario && form.cabanaId && (
-        <SelectorDeFechas
-          ocupadas={ocupadas}
-          checkIn={form.fechaCheckIn}
-          checkOut={form.fechaCheckOut}
-          onError={setErrorLocal}
-          onCambiar={({ checkIn, checkOut }) => {
-            actualizar({ fechaCheckIn: checkIn, fechaCheckOut: checkOut });
-            if (checkOut) setMostrarCalendario(false);
-          }}
         />
+      </Campo>
+
+      {form.cabanaId && (
+        <Campo rotulo="Estadía" grupo>
+          <ResumenDeFechas checkIn={form.fechaCheckIn} checkOut={form.fechaCheckOut} />
+          <div className="pt-2">
+            <SelectorDeFechas
+              key={form.cabanaId}
+              ocupadas={ocupadas}
+              checkIn={form.fechaCheckIn}
+              checkOut={form.fechaCheckOut}
+              onError={setErrorLocal}
+              onCambiar={({ checkIn, checkOut }) => actualizar({ fechaCheckIn: checkIn, fechaCheckOut: checkOut })}
+            />
+          </div>
+        </Campo>
       )}
 
-      <div>
-        <label className={rotulo}>Monto Total del Alquiler ($)</label>
-        <CampoMonto
-          placeholder="Ej: 120.000"
-          value={form.montoTotal}
-          onChange={(montoTotal) => actualizar({ montoTotal })}
-          required
-        />
-      </div>
+      <Campo rotulo="Total de la estadía">
+        <CampoMonto value={form.montoTotal} onChange={(montoTotal) => actualizar({ montoTotal })} required />
+      </Campo>
 
-      <div>
-        <label className={rotulo}>Porcentaje de Seña (Opcional)</label>
+      <Campo
+        rotulo="Seña (%)"
+        ayuda={sena > 0 ? `Seña a cobrar: ${formatearMonto(sena)}` : 'Opcional. Dejalo vacío si no pedís seña.'}
+      >
         <input
           type="number"
+          inputMode="decimal"
           min="0"
           max="100"
           step="1"
-          placeholder="Dejalo vacío si no aplica"
           value={form.porcentajeSena}
           onChange={(e) => actualizar({ porcentajeSena: e.target.value })}
-          className={campo}
+          className={claseDeCampo}
         />
-      </div>
-
-      <div className="p-3 bg-slate-50 rounded-xl border border-slate-100 flex justify-between items-center text-xs font-medium">
-        <span className="text-slate-400">Monto de seña preliminar:</span>
-        <span className="font-bold text-slate-900">{formatearMonto(sena)}</span>
-      </div>
+      </Campo>
 
       <Aviso>{errorLocal || error}</Aviso>
 
-      <button
-        type="submit"
-        disabled={cargando}
-        className="w-full bg-slate-900 hover:bg-slate-800 text-white p-3.5 rounded-xl font-bold transition text-xs shadow-xs tracking-wide uppercase disabled:bg-slate-300 cursor-pointer"
-      >
-        {cargando ? 'Registrando...' : 'Confirmar Reserva'}
-      </button>
+      <Boton type="submit" ancho disabled={cargando}>
+        {cargando ? 'Guardando…' : 'Crear reserva'}
+      </Boton>
     </form>
   );
 }

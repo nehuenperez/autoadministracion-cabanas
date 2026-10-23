@@ -1,24 +1,39 @@
+import { ArrowLeft } from 'lucide-react';
+
 /**
- * Barra fija de arriba. Con `antetitulo` y `titulo` muestra el nombre de la
- * sección; `izquierda` y `derecha` son para botones (Volver, Nueva reserva) y
- * `children` para lo que va debajo (un buscador).
+ * Barra fija de arriba.
+ *   titulo / subtitulo: el nombre de la pantalla y una línea de contexto
+ *   onVolver:           muestra la flecha para volver
+ *   derecha:            un botón o una insignia a la derecha
+ *   children:           lo que va debajo (un buscador)
  */
-export default function Encabezado({ antetitulo, titulo, izquierda, derecha, children }) {
+export default function Encabezado({ titulo, subtitulo, onVolver, textoVolver = 'Volver', derecha, children }) {
   return (
-    <header className="sticky top-0 z-20 bg-white/85 backdrop-blur-md border-b border-slate-200/60 px-4 py-3.5 space-y-3">
-      <div className="flex items-center justify-between gap-3 min-h-9">
-        {izquierda}
-        {(antetitulo || titulo) && (
-          <div className={izquierda ? 'text-center' : ''}>
-            {antetitulo && (
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">{antetitulo}</span>
+    <header className="sticky top-0 z-20 bg-slate-50/90 backdrop-blur-md border-b border-slate-200 px-4 pt-seguro pb-3">
+      <div className="max-w-md mx-auto space-y-3">
+        <div className="flex items-center justify-between gap-3 min-h-11">
+          <div className="flex items-center gap-1 min-w-0">
+            {onVolver && (
+              <button
+                type="button"
+                onClick={onVolver}
+                className="-ml-2 min-h-11 pl-2 pr-3 inline-flex items-center gap-1.5 rounded-xl text-[15px] font-medium text-slate-600 hover:bg-slate-100 active:bg-slate-200 cursor-pointer"
+              >
+                <ArrowLeft className="size-5" aria-hidden="true" />
+                {textoVolver}
+              </button>
             )}
-            {titulo && <h1 className="text-lg font-bold text-slate-900 tracking-tight">{titulo}</h1>}
+            {titulo && (
+              <div className="min-w-0">
+                <h1 className="text-xl font-bold text-slate-900 truncate">{titulo}</h1>
+                {subtitulo && <p className="text-sm text-slate-500 truncate first-letter:uppercase">{subtitulo}</p>}
+              </div>
+            )}
           </div>
-        )}
-        {derecha ?? (izquierda && <span className="w-14" />)}
+          {derecha}
+        </div>
+        {children}
       </div>
-      {children}
     </header>
   );
 }

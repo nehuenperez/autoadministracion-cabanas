@@ -1,16 +1,21 @@
 import { useState } from 'react';
+import { Sparkles, StickyNote, X } from 'lucide-react';
 import { interpretarMensaje } from '../../utils/interpretarMensaje.js';
+import { claseDeCampo } from '../../utils/estilos.js';
 import { buscarPorDni } from '../../services/huespedes.service.js';
+import Campo from '../comunes/Campo.jsx';
+import Boton from '../comunes/Boton.jsx';
+import Aviso from '../comunes/Aviso.jsx';
 
 const CAMPOS = [
   { campo: 'nombre', etiqueta: 'Nombre', obligatorio: true },
   { campo: 'apellido', etiqueta: 'Apellido', obligatorio: true },
   { campo: 'dni', etiqueta: 'DNI', obligatorio: true },
   { campo: 'cuil', etiqueta: 'CUIL' },
-  { campo: 'telefono', etiqueta: 'Teléfono' },
-  { campo: 'vehiculoPatente', etiqueta: 'Patente' },
+  { campo: 'telefono', etiqueta: 'Teléfono', ancho: true },
   { campo: 'direccion', etiqueta: 'Domicilio', ancho: true },
-  { campo: 'vehiculoModelo', etiqueta: 'Vehículo', ancho: true },
+  { campo: 'vehiculoModelo', etiqueta: 'Vehículo' },
+  { campo: 'vehiculoPatente', etiqueta: 'Patente' },
 ];
 
 /**
@@ -127,98 +132,88 @@ export default function CargaRapidaHuespedes({ titularActual, onConfirmar }) {
   }
 
   return (
-    <div className="space-y-3">
-      <textarea
-        value={texto}
-        onChange={(e) => setTexto(e.target.value)}
-        placeholder="Pegá acá el mensaje con los datos (nombre, DNI, domicilio, auto, patente...)"
-        className="w-full p-3 text-sm text-slate-800 border border-slate-200 rounded-xl bg-white h-28 focus:outline-hidden focus:ring-2 focus:ring-blue-600/10 focus:border-blue-500 transition"
-      />
-      <button
-        type="button"
-        onClick={handleInterpretar}
-        disabled={!texto.trim() || trabajando}
-        className="w-full bg-blue-600 hover:bg-blue-700 text-white p-3 rounded-xl font-bold transition text-xs shadow-xs cursor-pointer disabled:bg-slate-300 disabled:cursor-not-allowed"
-      >
-        {filas ? '↻ Volver a interpretar' : '✨ Interpretar mensaje'}
-      </button>
+    <div className="space-y-4">
+      <Campo rotulo="Mensaje del huésped" ayuda="Pegá el mensaje tal cual llegó: nombres, DNI, domicilio, auto y patente.">
+        <textarea
+          value={texto}
+          onChange={(e) => setTexto(e.target.value)}
+          rows={5}
+          className={`${claseDeCampo} py-3`}
+        />
+      </Campo>
+      <Boton variante={filas ? 'secundario' : 'primario'} ancho icono={Sparkles} onClick={handleInterpretar} disabled={!texto.trim() || trabajando}>
+        {filas ? 'Volver a leer el mensaje' : 'Completar datos'}
+      </Boton>
 
       {filas && (
         <div className="space-y-3 pt-1">
           {filas.length === 0 ? (
-            <p className="text-xs font-semibold text-rose-600 bg-rose-50 border border-rose-100 p-3 rounded-lg text-center">
-              No se encontró ningún huésped en el mensaje. Revisalo o cargalo a mano abajo.
-            </p>
+            <Aviso>No se encontró ningún huésped en el mensaje. Revisalo o cargalos con «Buscar por DNI».</Aviso>
           ) : (
-            <p className="text-[11px] font-medium text-slate-500 text-center">
-              Revisá los datos. Podés corregir cualquier campo antes de confirmar.
-            </p>
+            <p className="text-[15px] text-slate-600">Revisá los datos y corregí lo que haga falta antes de guardar.</p>
           )}
 
           {filas.map((fila) => (
-            <div key={fila.clave} className="p-3 bg-white rounded-xl border border-slate-200 space-y-2.5">
+            <div key={fila.clave} className="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-3">
               <div className="flex items-center justify-between gap-2">
                 {titularActual ? (
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">{fila.rol}</span>
+                  <span className="inline-block text-[15px] font-semibold text-slate-900 first-letter:uppercase">{fila.rol}</span>
                 ) : (
-                  <label className="flex items-center gap-1.5 text-[11px] font-bold text-slate-700 cursor-pointer">
+                  <label className="flex items-center gap-2.5 min-h-11 text-[15px] font-semibold text-slate-900 cursor-pointer">
                     <input
                       type="radio"
                       name="titular-carga-rapida"
                       checked={fila.rol === 'titular'}
                       onChange={() => elegirTitular(fila.clave)}
+                      className="size-5 accent-slate-900"
                     />
                     {fila.rol === 'titular' ? 'Titular' : 'Acompañante'}
                   </label>
                 )}
-                <div className="flex items-center gap-1.5">
-                  {fila.buscando && <span className="text-[9px] font-medium text-slate-400">Buscando si ya vino…</span>}
-                  {fila.yaRegistrado && (
-                    <span className="text-[9px] font-bold uppercase bg-emerald-50 text-emerald-700 border border-emerald-100 px-1.5 py-0.5 rounded">
-                      Ya vino antes
-                    </span>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => quitarFila(fila.clave)}
-                    className="text-[10px] font-bold text-rose-600 bg-rose-50 px-2 py-0.5 rounded border border-rose-100 cursor-pointer"
-                  >
-                    Quitar
-                  </button>
-                </div>
+                <button
+                  type="button"
+                  onClick={() => quitarFila(fila.clave)}
+                  aria-label="Quitar este huésped"
+                  className="size-11 shrink-0 rounded-xl flex items-center justify-center text-slate-500 hover:text-rose-700 hover:bg-rose-50 cursor-pointer"
+                >
+                  <X className="size-5" aria-hidden="true" />
+                </button>
               </div>
 
-              {fila.avisos.length > 0 && (
-                <ul className="p-2 bg-amber-50 border border-amber-100 rounded-lg text-[11px] font-medium text-amber-900 space-y-0.5">
-                  {fila.avisos.map((aviso) => (
-                    <li key={aviso}>⚠️ {aviso}</li>
-                  ))}
-                </ul>
-              )}
-
-              {fila.notasComportamiento && (
-                <p className="p-2 bg-amber-50/60 border border-amber-100 rounded-lg text-[11px] text-amber-900">
-                  📋 Notas: {fila.notasComportamiento}
+              {(fila.buscando || fila.yaRegistrado) && (
+                <p className="text-sm text-slate-500">
+                  {fila.buscando ? 'Buscando si ya vino antes…' : 'Ya vino antes: se completaron los datos que faltaban.'}
                 </p>
               )}
 
-              <div className="grid grid-cols-2 gap-2">
+              {fila.avisos.length > 0 && (
+                <Aviso tipo="advertencia">
+                  <ul className="space-y-0.5">
+                    {fila.avisos.map((aviso) => <li key={aviso}>{aviso}</li>)}
+                  </ul>
+                </Aviso>
+              )}
+
+              {fila.notasComportamiento && (
+                <div className="flex gap-2.5 p-3 bg-amber-50 border border-amber-200 rounded-xl text-[15px] text-amber-950">
+                  <StickyNote className="size-5 shrink-0 text-amber-700" aria-hidden="true" />
+                  <p>{fila.notasComportamiento}</p>
+                </div>
+              )}
+
+              <div className="grid grid-cols-2 gap-3">
                 {CAMPOS.map(({ campo, etiqueta, obligatorio, ancho }) => {
                   const falta = obligatorio && !fila[campo].trim();
                   return (
-                    <label key={campo} className={ancho ? 'col-span-2' : ''}>
-                      <span className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">
-                        {etiqueta}
-                      </span>
+                    <Campo key={campo} rotulo={etiqueta} className={ancho ? 'col-span-2' : ''}>
                       <input
                         type="text"
                         value={fila[campo]}
                         onChange={(e) => cambiarCampo(fila.clave, campo, e.target.value)}
-                        className={`w-full p-2 text-xs font-medium text-slate-800 border rounded-lg bg-slate-50 ${
-                          falta ? 'border-rose-300 bg-rose-50/50' : 'border-slate-200'
-                        }`}
+                        aria-invalid={falta}
+                        className={`${claseDeCampo} ${falta ? 'border-rose-400 bg-rose-50' : ''}`}
                       />
-                    </label>
+                    </Campo>
                   );
                 })}
               </div>
@@ -226,39 +221,22 @@ export default function CargaRapidaHuespedes({ titularActual, onConfirmar }) {
           ))}
 
           {avisosGenerales.length > 0 && (
-            <div className="p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-[11px] text-slate-600 space-y-0.5">
-              <p className="font-bold text-slate-500">Texto del mensaje que no se usó:</p>
-              <ul className="space-y-0.5">
-                {avisosGenerales.map((aviso) => (
-                  <li key={aviso}>• {aviso.replace(/^No se usó: /, '')}</li>
-                ))}
+            <div className="p-3 bg-white border border-slate-200 rounded-xl text-[15px] text-slate-600 space-y-1">
+              <p className="font-medium text-slate-700">Texto del mensaje que no se usó:</p>
+              <ul className="list-disc pl-5 space-y-0.5">
+                {avisosGenerales.map((aviso) => <li key={aviso}>{aviso.replace(/^No se usó: /, '')}</li>)}
               </ul>
             </div>
           )}
 
-          {error && (
-            <div className="p-2.5 bg-rose-50 border border-rose-100 rounded-lg text-center text-xs font-semibold text-rose-600">
-              {error}
-            </div>
-          )}
+          <Aviso>{error}</Aviso>
 
           {filas.length > 0 && (
             <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={handleConfirmar}
-                disabled={trabajando}
-                className="flex-1 bg-slate-900 hover:bg-slate-800 text-white p-3 rounded-xl font-bold transition text-xs shadow-xs cursor-pointer disabled:bg-slate-300"
-              >
-                {trabajando ? 'Guardando...' : `Confirmar y vincular (${filas.length})`}
-              </button>
-              <button
-                type="button"
-                onClick={cancelar}
-                className="bg-slate-200 text-slate-700 px-4 rounded-xl font-bold text-xs cursor-pointer"
-              >
-                Cancelar
-              </button>
+              <Boton variante="exito" ancho onClick={handleConfirmar} disabled={trabajando}>
+                {trabajando ? 'Guardando…' : `Guardar ${filas.length === 1 ? 'huésped' : `${filas.length} huéspedes`}`}
+              </Boton>
+              <Boton variante="secundario" onClick={cancelar}>Cancelar</Boton>
             </div>
           )}
         </div>

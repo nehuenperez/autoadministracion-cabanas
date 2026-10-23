@@ -1,9 +1,12 @@
-/** Pantalla completa de carga, con el texto de lo que se está haciendo. */
-export default function Cargando({ texto = 'Cargando...' }) {
+/** Indicador de carga. `pantallaCompleta` ocupa toda la pantalla; si no, sólo su lugar. */
+export default function Cargando({ texto = 'Cargando…', pantallaCompleta = true }) {
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-[#f8fafc]">
-      <div className="w-8 h-8 border-3 border-slate-900 border-t-transparent rounded-full animate-spin" />
-      <p className="mt-3 text-xs font-semibold text-slate-400 uppercase tracking-wider">{texto}</p>
+    <div
+      role="status"
+      className={`flex flex-col items-center justify-center gap-3 ${pantallaCompleta ? 'min-h-screen bg-slate-50' : 'py-16'}`}
+    >
+      <div className="size-8 border-3 border-slate-300 border-t-slate-900 rounded-full animate-spin" aria-hidden="true" />
+      <p className="text-sm text-slate-500">{texto}</p>
     </div>
   );
 }

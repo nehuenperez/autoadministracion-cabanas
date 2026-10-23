@@ -1,11 +1,20 @@
 import { useState } from 'react';
-import { formatearFecha } from '../../utils/fechas.js';
-import { formatearMonto, parsearMonto } from '../../utils/montos.js';
+import { Banknote, Landmark, Trash2 } from 'lucide-react';
+import { formatearDiaCorto } from '../../utils/fechas.js';
+import { formatearMonto, formatearNumero, parsearMonto } from '../../utils/montos.js';
 import Tarjeta from '../comunes/Tarjeta.jsx';
+import Campo from '../comunes/Campo.jsx';
 import CampoMonto from '../comunes/CampoMonto.jsx';
+import ControlSegmentado from '../comunes/ControlSegmentado.jsx';
+import Boton from '../comunes/Boton.jsx';
 
-/** Lista de cobros de la reserva y el formulario para registrar uno nuevo. */
-export default function RegistroDeCobros({ pagos, ocupado, onRegistrar, onEliminar }) {
+const MEDIOS = [
+  { valor: 'Efectivo', texto: 'Efectivo' },
+  { valor: 'Transferencia', texto: 'Transferencia' },
+];
+
+/** Los cobros de la reserva y el formulario para registrar uno nuevo. */
+export default function RegistroDeCobros({ pagos, saldo, ocupado, onRegistrar, onEliminar }) {
   const [monto, setMonto] = useState('');
   const [metodoPago, setMetodoPago] = useState('Efectivo');
 
@@ -20,57 +29,52 @@ export default function RegistroDeCobros({ pagos, ocupado, onRegistrar, onElimin
   }
 
   return (
-    <Tarjeta titulo="Registro de Cobros" className="space-y-4">
+    <Tarjeta titulo="Cobros">
       {pagos.length === 0 ? (
-        <p className="text-xs font-medium text-slate-400 bg-slate-50/50 p-3 rounded-lg text-center border border-dashed border-slate-200">
-          No hay pagos registrados aún.
-        </p>
+        <p className="text-[15px] text-slate-500">Todavía no se registró ningún cobro.</p>
       ) : (
-        <div className="space-y-1.5">
-          {pagos.map((p) => (
-            <div key={p.id} className="flex justify-between items-center p-3 bg-slate-50 border border-slate-100 rounded-lg text-xs font-semibold">
-              <div>
-                <p className="font-bold text-slate-800">{formatearMonto(p.monto)}</p>
-                <p className="text-[10px] text-slate-400 font-medium">{formatearFecha(p.fecha)}</p>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="bg-white px-2 py-0.5 rounded border border-slate-200 text-[9px] uppercase font-bold text-slate-500">
-                  {p.metodoPago}
+        <ul className="divide-y divide-slate-100">
+          {pagos.map((p) => {
+            const Icono = p.metodoPago === 'Transferencia' ? Landmark : Banknote;
+            return (
+              <li key={p.id} className="flex items-center gap-3 py-2">
+                <span className="size-10 shrink-0 rounded-full bg-emerald-50 text-emerald-700 flex items-center justify-center">
+                  <Icono className="size-5" aria-hidden="true" />
                 </span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[15px] font-semibold text-slate-900 tabular-nums">{formatearMonto(p.monto)}</p>
+                  <p className="text-sm text-slate-500 first-letter:uppercase">
+                    {p.metodoPago}, {formatearDiaCorto(p.fecha)}
+                  </p>
+                </div>
                 <button
                   type="button"
                   onClick={() => onEliminar(p.id)}
                   disabled={ocupado}
-                  aria-label="Borrar cobro"
-                  className="text-rose-600 hover:text-rose-800 bg-rose-50 hover:bg-rose-100 p-1.5 rounded-lg transition text-xs cursor-pointer"
+                  aria-label={`Borrar el cobro de ${formatearMonto(p.monto)}`}
+                  className="size-11 shrink-0 rounded-xl flex items-center justify-center text-slate-400 hover:text-rose-700 hover:bg-rose-50 active:bg-rose-100 cursor-pointer disabled:opacity-50"
                 >
-                  🗑️
+                  <Trash2 className="size-5" aria-hidden="true" />
                 </button>
-              </div>
-            </div>
-          ))}
-        </div>
+              </li>
+            );
+          })}
+        </ul>
       )}
 
-      <form onSubmit={registrar} className="grid grid-cols-1 gap-2 pt-2 border-t border-slate-100">
-        <CampoMonto placeholder="Monto a cobrar ($)" value={monto} onChange={setMonto} className="p-2.5" />
-        <div className="flex gap-2">
-          <select
-            value={metodoPago}
-            onChange={(e) => setMetodoPago(e.target.value)}
-            className="p-2.5 text-xs font-bold border border-slate-200 rounded-xl bg-slate-50/50"
-          >
-            <option value="Efectivo">Efectivo</option>
-            <option value="Transferencia">Transferencia</option>
-          </select>
-          <button
-            type="submit"
-            disabled={ocupado || parsearMonto(monto) <= 0}
-            className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white p-2.5 rounded-xl font-bold transition text-xs shadow-xs cursor-pointer disabled:bg-slate-300"
-          >
-            Registrar Cobro
-          </button>
-        </div>
+      <form onSubmit={registrar} className="space-y-3 pt-4 border-t border-slate-100">
+        <Campo rotulo="Nuevo cobro">
+          <CampoMonto placeholder="Monto" value={monto} onChange={setMonto} />
+        </Campo>
+        {saldo > 0 && parsearMonto(monto) !== saldo && (
+          <Boton variante="suave" tamano="chico" onClick={() => setMonto(formatearNumero(saldo))}>
+            Completar con el saldo: {formatearMonto(saldo)}
+          </Boton>
+        )}
+        <ControlSegmentado etiqueta="Medio de pago" opciones={MEDIOS} valor={metodoPago} onCambiar={setMetodoPago} />
+        <Boton type="submit" variante="exito" ancho disabled={ocupado || parsearMonto(monto) <= 0}>
+          Registrar cobro
+        </Boton>
       </form>
     </Tarjeta>
   );

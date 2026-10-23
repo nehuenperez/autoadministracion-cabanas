@@ -1,17 +1,39 @@
 import { useState } from 'react';
+import { UserPlus } from 'lucide-react';
+import Tarjeta from '../comunes/Tarjeta.jsx';
 import Aviso from '../comunes/Aviso.jsx';
+import Boton from '../comunes/Boton.jsx';
+import ControlSegmentado from '../comunes/ControlSegmentado.jsx';
 import BuscadorPorDni from '../reservas/BuscadorPorDni.jsx';
 import CargaRapidaHuespedes from '../reservas/CargaRapidaHuespedes.jsx';
+
+const FORMAS = [
+  { valor: 'mensaje', texto: 'Pegar mensaje' },
+  { valor: 'dni', texto: 'Buscar por DNI' },
+];
 
 /**
  * Alta de huéspedes en la reserva: pegando el mensaje que mandó el cliente
  * (carga rápida) o a mano, buscando por DNI. Las dos vías terminan en
  * `onVincular`, que suma los huéspedes a los que ya estaban.
+ *
+ * Si la reserva ya tiene titular, arranca cerrada detrás de un botón: lo
+ * habitual a esa altura es cobrar, no cargar gente.
  */
 export default function CargaDeHuespedes({ titular, ocupado, onVincular }) {
+  const [abierta, setAbierta] = useState(!titular);
+  const [forma, setForma] = useState('mensaje');
   const [manuales, setManuales] = useState({}); // un huésped por rol: { titular, acompañante }
   const [version, setVersion] = useState(0); // al cambiarla se vacían los buscadores
   const [aviso, setAviso] = useState('');
+
+  if (!abierta) {
+    return (
+      <Boton variante="secundario" ancho icono={UserPlus} onClick={() => setAbierta(true)}>
+        Agregar acompañantes
+      </Boton>
+    );
+  }
 
   function huespedListo(datos) {
     setAviso('');
@@ -21,15 +43,15 @@ export default function CargaDeHuespedes({ titular, ocupado, onVincular }) {
   async function guardarManuales() {
     const cargados = Object.values(manuales);
     if (!titular && !manuales.titular?.dni?.trim()) {
-      setAviso('⚠️ Completá los datos del titular obligatoriamente.');
+      setAviso('Falta cargar al titular de la reserva.');
       return;
     }
     if (cargados.length === 0) {
-      setAviso('⚠️ No hay ningún dato de huésped listo para guardar.');
+      setAviso('Buscá a un huésped por su DNI para poder guardarlo.');
       return;
     }
     if (cargados.some((h) => !h.nombre?.trim() || !h.apellido?.trim() || !h.dni?.trim())) {
-      setAviso('⚠️ Completá nombre, apellido y DNI.');
+      setAviso('Completá nombre, apellido y DNI.');
       return;
     }
     if (await onVincular(cargados)) {
@@ -38,42 +60,42 @@ export default function CargaDeHuespedes({ titular, ocupado, onVincular }) {
     }
   }
 
+  async function confirmarDesdeMensaje(huespedes) {
+    const ok = await onVincular(huespedes);
+    if (ok && titular) setAbierta(false);
+    return ok;
+  }
+
   return (
-    <section className="bg-white rounded-xl p-5 shadow-xs border border-slate-200/70 space-y-4">
-      <h3 className="text-sm font-bold text-slate-900 tracking-tight">
-        {titular ? 'Agregar acompañantes' : 'Asignar Huéspedes'}
-      </h3>
+    <Tarjeta titulo={titular ? 'Agregar acompañantes' : 'Cargar huéspedes'}>
+      <ControlSegmentado etiqueta="Forma de carga" opciones={FORMAS} valor={forma} onCambiar={setForma} />
 
-      <div className="p-3 bg-blue-50/50 rounded-xl border border-blue-100 space-y-2">
-        <span className="text-[10px] font-bold text-blue-700 uppercase tracking-wider block">Carga rápida: pegá el mensaje</span>
-        <CargaRapidaHuespedes titularActual={titular} onConfirmar={onVincular} />
-      </div>
-
-      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider text-center">o cargalos a mano</p>
-
-      <div className="space-y-3">
-        {!titular && (
-          <div className="p-3 bg-slate-50 rounded-xl border border-slate-200/60">
-            <span className="text-[10px] font-bold text-indigo-600 uppercase tracking-wider block mb-2">Paso 1: Cargar Titular</span>
-            <BuscadorPorDni key={`titular-${version}`} rol="titular" onHuespedListo={huespedListo} />
+      {forma === 'mensaje' ? (
+        <CargaRapidaHuespedes titularActual={titular} onConfirmar={confirmarDesdeMensaje} />
+      ) : (
+        <div className="space-y-4">
+          {!titular && (
+            <div className="space-y-2">
+              <h3 className="text-[15px] font-semibold text-slate-900">Titular</h3>
+              <BuscadorPorDni key={`titular-${version}`} rol="titular" onHuespedListo={huespedListo} />
+            </div>
+          )}
+          <div className="space-y-2">
+            <h3 className="text-[15px] font-semibold text-slate-900">Acompañante</h3>
+            <BuscadorPorDni key={`acompanante-${version}`} rol="acompañante" onHuespedListo={huespedListo} />
           </div>
-        )}
-        <div className="p-3 bg-slate-50 rounded-xl border border-slate-200/60">
-          <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-2">Cargar Acompañante</span>
-          <BuscadorPorDni key={`acompanante-${version}`} rol="acompañante" onHuespedListo={huespedListo} />
+          <Aviso tipo="advertencia">{aviso}</Aviso>
+          <Boton variante="exito" ancho onClick={guardarManuales} disabled={ocupado}>
+            Guardar huéspedes
+          </Boton>
         </div>
-      </div>
+      )}
 
-      <Aviso tipo="advertencia">{aviso}</Aviso>
-
-      <button
-        type="button"
-        onClick={guardarManuales}
-        disabled={ocupado}
-        className="w-full bg-slate-900 hover:bg-slate-800 text-white p-3 rounded-xl font-bold transition text-xs shadow-xs cursor-pointer disabled:bg-slate-300"
-      >
-        Vincular Huéspedes a la Reserva
-      </button>
-    </section>
+      {titular && (
+        <Boton variante="fantasma" ancho onClick={() => setAbierta(false)}>
+          Cerrar
+        </Boton>
+      )}
+    </Tarjeta>
   );
 }

@@ -4,12 +4,15 @@ import { abortarReserva, editarReserva, obtenerReservaPorId } from '../services/
 import { eliminarPago, registrarPago } from '../services/pagos.service.js';
 import { crearHuesped, vincularAReserva } from '../services/huespedes.service.js';
 import { useDatos } from '../hooks/useDatos.js';
-import { acompanantesDe, titularDe, vinculosDe } from '../utils/reservas.js';
+import { acompanantesDe, saldoPendiente, titularDe, vinculosDe } from '../utils/reservas.js';
 import { soloConDato } from '../utils/huespedes.js';
 import { ESTILOS, semaforoDe } from '../utils/semaforo.js';
 import Pantalla from '../components/layout/Pantalla.jsx';
 import Encabezado from '../components/layout/Encabezado.jsx';
+import { Ban, CalendarPlus } from 'lucide-react';
 import Cargando from '../components/comunes/Cargando.jsx';
+import Aviso from '../components/comunes/Aviso.jsx';
+import Boton from '../components/comunes/Boton.jsx';
 import MensajeFlotante from '../components/comunes/MensajeFlotante.jsx';
 import TarjetaAlojamiento from '../components/detalle/TarjetaAlojamiento.jsx';
 import { TarjetaTitular, TarjetaAcompanantes } from '../components/detalle/TarjetaHuespedes.jsx';
@@ -54,24 +57,20 @@ export default function DetalleReserva() {
     }
   }
 
-  if (cargando) return <Cargando />;
+  if (cargando) return <Cargando texto="Cargando la reserva…" />;
 
   if (!reserva) {
     return (
-      <div className="p-6 max-w-sm mx-auto mt-16 bg-white rounded-2xl border border-slate-200 shadow-xs text-center">
-        <p className="text-slate-800 font-bold text-sm mb-4">
-          {error?.response?.status === 404 ? 'La reserva no existe' : 'No se pudo cargar la reserva'}
-        </p>
-        <button type="button" onClick={() => navigate('/')} className="bg-slate-900 text-white px-4 py-2 rounded-xl text-xs font-bold cursor-pointer">
-          Volver
-        </button>
-      </div>
+      <Pantalla encabezado={<Encabezado onVolver={() => navigate('/')} />}>
+        <Aviso>{error?.response?.status === 404 ? 'Esta reserva no existe.' : 'No se pudo cargar la reserva. Revisá la conexión y probá de nuevo.'}</Aviso>
+      </Pantalla>
     );
   }
 
   const titular = titularDe(reserva);
   const semaforo = semaforoDe(reserva);
   const pagos = [...(reserva.Pagos ?? [])].sort(porFecha);
+  const activa = reserva.estado !== 'Abortada' && reserva.estado !== 'Finalizada';
 
   // Suma los huéspedes a los que ya estaban (el backend reemplaza la lista entera).
   // Cada uno se crea o actualiza por DNI; si ya estaba vinculado, sólo cambia su rol.
@@ -85,25 +84,25 @@ export default function DetalleReserva() {
         else vinculos.push({ huespedId: guardado.id, rol: huesped.rol });
       }
       await vincularAReserva(id, vinculos);
-    }, '✨ Huéspedes vinculados correctamente');
+    }, 'Huéspedes guardados');
 
-  const guardarHuesped = (datos) => ejecutar(() => crearHuesped(datos), '✨ Datos modificados correctamente');
+  const guardarHuesped = (datos) => ejecutar(() => crearHuesped(datos), 'Datos guardados');
 
   function quitarAcompanante(huespedId) {
-    if (!confirm('¿Deseás remover este acompañante de la reserva?')) return;
+    if (!confirm('¿Quitar a este acompañante de la reserva?')) return;
     ejecutar(
       () => vincularAReserva(id, vinculosDe(reserva).filter((v) => v.huespedId !== huespedId)),
-      '🗑️ Acompañante removido'
+      'Acompañante quitado de la reserva'
     );
   }
 
   function borrarCobro(pagoId) {
-    if (!confirm('¿Deseás borrar este registro de cobro?')) return;
-    ejecutar(() => eliminarPago(pagoId), '🗑️ Cobro eliminado correctamente');
+    if (!confirm('¿Borrar este cobro? El saldo se vuelve a calcular.')) return;
+    ejecutar(() => eliminarPago(pagoId), 'Cobro borrado');
   }
 
   function abortar() {
-    if (!confirm('¿Confirmás cancelar esta reserva?')) return;
+    if (!confirm('¿Cancelar esta reserva? Las fechas quedan libres para otra reserva.')) return;
     ejecutar(() => abortarReserva(id), 'Reserva cancelada');
   }
 
@@ -120,17 +119,14 @@ export default function DetalleReserva() {
     });
   }
 
+
   return (
     <Pantalla
       encabezado={
         <Encabezado
-          izquierda={
-            <button type="button" onClick={volver} className="text-sm font-semibold text-slate-500 hover:text-slate-900 transition cursor-pointer">
-              ← Volver
-            </button>
-          }
+          onVolver={volver}
           derecha={
-            <span className={`text-[11px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-md border ${ESTILOS[semaforo.clave].insignia}`}>
+            <span className={`text-sm font-semibold px-2.5 py-1 rounded-lg border ${ESTILOS[semaforo.clave].insignia}`}>
               {semaforo.etiqueta}
             </span>
           }
@@ -139,9 +135,22 @@ export default function DetalleReserva() {
     >
       <TarjetaAlojamiento
         reserva={reserva}
-        colorDeBorde={ESTILOS[semaforo.clave].borde}
         ocupado={ocupado}
-        onGuardarFechas={(fechas) => ejecutar(() => editarReserva(id, fechas), '✨ Fechas modificadas correctamente')}
+        onGuardarFechas={(fechas) => ejecutar(() => editarReserva(id, fechas), 'Fechas actualizadas')}
+      />
+
+      <EstadoDeCuentas
+        reserva={reserva}
+        ocupado={ocupado}
+        onGuardarMontos={(montos) => ejecutar(() => editarReserva(id, montos), 'Montos actualizados')}
+      />
+
+      <RegistroDeCobros
+        pagos={pagos}
+        saldo={activa ? saldoPendiente(reserva) : 0}
+        ocupado={ocupado}
+        onRegistrar={(cobro) => ejecutar(() => registrarPago(id, cobro), 'Cobro registrado')}
+        onEliminar={borrarCobro}
       />
 
       <TarjetaTitular titular={titular} ocupado={ocupado} onGuardar={guardarHuesped} />
@@ -153,35 +162,16 @@ export default function DetalleReserva() {
         onQuitar={quitarAcompanante}
       />
 
-      <EstadoDeCuentas
-        reserva={reserva}
-        titular={titular}
-        ocupado={ocupado}
-        onGuardarMontos={(montos) => ejecutar(() => editarReserva(id, montos), '✨ Montos corregidos correctamente')}
-      />
-
       <CargaDeHuespedes titular={titular} ocupado={ocupado} onVincular={vincularHuespedes} />
 
-      <RegistroDeCobros
-        pagos={pagos}
-        ocupado={ocupado}
-        onRegistrar={(cobro) => ejecutar(() => registrarPago(id, cobro), '✅ Cobro registrado')}
-        onEliminar={borrarCobro}
-      />
-
-      <div className="flex flex-col gap-2 pt-2">
-        <button type="button" onClick={agregarDias} className="w-full bg-white text-slate-700 border border-slate-200 p-3 rounded-xl font-semibold transition text-xs active:bg-slate-50 cursor-pointer">
-          🗓️ Cliente desea agregar días
-        </button>
-        {reserva.estado !== 'Abortada' && reserva.estado !== 'Finalizada' && (
-          <button
-            type="button"
-            onClick={abortar}
-            disabled={ocupado}
-            className="w-full bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-100 p-3 rounded-xl font-bold transition text-xs cursor-pointer"
-          >
-            Cancelar reserva (Abortar)
-          </button>
+      <div className="space-y-2 pt-2">
+        <Boton variante="secundario" ancho icono={CalendarPlus} onClick={agregarDias}>
+          Extender la estadía
+        </Boton>
+        {activa && (
+          <Boton variante="peligro" ancho icono={Ban} onClick={abortar} disabled={ocupado}>
+            Cancelar reserva
+          </Boton>
         )}
       </div>
 

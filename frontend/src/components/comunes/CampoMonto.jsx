@@ -1,4 +1,5 @@
 import { formatearMientrasSeEscribe } from '../../utils/montos.js';
+import { claseDeCampo } from '../../utils/estilos.js';
 
 /**
  * Campo de monto en pesos: muestra el teclado numérico del celular y agrega
@@ -7,13 +8,18 @@ import { formatearMientrasSeEscribe } from '../../utils/montos.js';
  */
 export default function CampoMonto({ value, onChange, className = '', ...resto }) {
   return (
-    <input
-      type="text"
-      inputMode="numeric"
-      value={value}
-      onChange={(e) => onChange(formatearMientrasSeEscribe(e.target.value))}
-      className={`w-full p-3 text-sm font-medium border border-slate-200 rounded-xl bg-slate-50/50 focus:outline-hidden focus:ring-2 focus:ring-blue-600/10 focus:border-blue-500 transition ${className}`}
-      {...resto}
-    />
+    <div className="relative">
+      <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-base text-slate-500 pointer-events-none" aria-hidden="true">
+        $
+      </span>
+      <input
+        type="text"
+        inputMode="numeric"
+        value={value}
+        onChange={(e) => onChange(formatearMientrasSeEscribe(e.target.value))}
+        className={`${claseDeCampo} pl-7 tabular-nums ${className}`}
+        {...resto}
+      />
+    </div>
   );
 }

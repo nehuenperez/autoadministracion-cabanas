@@ -6,7 +6,6 @@ import { useDatos } from '../hooks/useDatos.js';
 import Pantalla from '../components/layout/Pantalla.jsx';
 import Encabezado from '../components/layout/Encabezado.jsx';
 import Cargando from '../components/comunes/Cargando.jsx';
-import Tarjeta from '../components/comunes/Tarjeta.jsx';
 import Aviso from '../components/comunes/Aviso.jsx';
 import FormularioReserva from '../components/reservas/FormularioReserva.jsx';
 
@@ -42,7 +41,7 @@ export default function NuevaReserva() {
       // el historial: "Volver" desde el detalle no debe reabrir un formulario ya enviado.
       navigate(`/reservas/${nuevaReserva.id}`, { replace: true });
     } catch (err) {
-      setError(err.response?.data?.error || 'Error al intentar dar de alta la reserva. Verifique las fechas.');
+      setError(err.response?.data?.error || 'No se pudo crear la reserva. Revisá las fechas y probá de nuevo.');
       setGuardando(false);
     }
   }
@@ -56,35 +55,19 @@ export default function NuevaReserva() {
   if (cargando) return <Cargando />;
 
   return (
-    <Pantalla
-      encabezado={
-        <Encabezado
-          titulo="Nuevo Registro"
-          izquierda={
-            <button
-              type="button"
-              onClick={cancelar}
-              className="text-sm font-semibold text-slate-500 hover:text-slate-900 transition cursor-pointer"
-            >
-              ✕ Cancelar
-            </button>
-          }
-        />
-      }
-    >
-      <Tarjeta>
-        <div className="border-b border-slate-50 pb-2">
-          <h2 className="text-base font-bold text-slate-900">Bloqueo de Disponibilidad</h2>
-          <p className="text-xs text-slate-400 mt-0.5">Ingresá los datos del período para reservar la propiedad.</p>
-          {titularAClonar && (
-            <p className="text-xs font-semibold text-blue-700 bg-blue-50 border border-blue-100 rounded-lg p-2 mt-2">
-              Titular: <span className="capitalize">{titularAClonar.nombre} {titularAClonar.apellido}</span>
-            </p>
-          )}
-        </div>
+    <Pantalla encabezado={<Encabezado onVolver={cancelar} textoVolver="Cancelar" />}>
+      <div className="space-y-1">
+        <h1 className="text-2xl font-bold text-slate-900">Nueva reserva</h1>
+        {titularAClonar && (
+          <p className="text-[15px] text-slate-600">
+            Continúa la estadía de <span className="font-semibold text-slate-900 capitalize">{titularAClonar.nombre} {titularAClonar.apellido}</span>.
+          </p>
+        )}
+      </div>
 
+      <section className="bg-white rounded-2xl border border-slate-200 p-4">
         {errorDeCarga ? (
-          <Aviso>No se pudieron cargar las cabañas disponibles</Aviso>
+          <Aviso>No se pudieron cargar las cabañas. Revisá la conexión y probá de nuevo.</Aviso>
         ) : (
           <FormularioReserva
             cabanas={datos.cabanas}
@@ -95,7 +78,7 @@ export default function NuevaReserva() {
             error={error}
           />
         )}
-      </Tarjeta>
+      </section>
     </Pantalla>
   );
 }

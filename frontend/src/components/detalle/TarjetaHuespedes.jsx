@@ -1,46 +1,66 @@
 import { useState } from 'react';
+import { Car, IdCard, MapPin, Pencil, Phone, StickyNote, UserMinus } from 'lucide-react';
 import Tarjeta, { BotonEditar } from '../comunes/Tarjeta.jsx';
+import Aviso from '../comunes/Aviso.jsx';
 import FormularioHuesped from './FormularioHuesped.jsx';
+import BotonWhatsapp from '../reservas/BotonWhatsapp.jsx';
+import { clasesDeBoton } from '../../utils/estilos.js';
 
-/** Responsable de la reserva: sus datos, su vehículo y las notas de comportamiento. */
+function Dato({ icono: Icono, children }) {
+  return (
+    <li className="flex items-start gap-3 py-1.5 text-[15px] text-slate-700">
+      <Icono className="size-5 text-slate-400 shrink-0 mt-0.5" aria-hidden="true" />
+      <span className="min-w-0 break-words">{children}</span>
+    </li>
+  );
+}
+
+/** Responsable de la reserva: sus datos, su vehículo, las notas y cómo contactarlo. */
 export function TarjetaTitular({ titular, ocupado, onGuardar }) {
   const [editando, setEditando] = useState(false);
 
+  if (!titular) {
+    return (
+      <Tarjeta titulo="Titular">
+        <Aviso tipo="advertencia">Falta cargar al titular de la reserva. Podés hacerlo más abajo, en «Cargar huéspedes».</Aviso>
+      </Tarjeta>
+    );
+  }
+
+  const vehiculo = [titular.vehiculoModelo, titular.vehiculoPatente].filter(Boolean).join(', patente ');
+
   return (
-    <Tarjeta
-      titulo="Responsable Titular"
-      accion={titular && !editando && <BotonEditar onClick={() => setEditando(true)}>Editar datos</BotonEditar>}
-    >
-      {!titular && (
-        <p className="text-xs font-bold text-rose-600 bg-rose-50/60 border border-rose-100 p-3 rounded-lg text-center">
-          ⚠️ Falta registrar los datos del titular
-        </p>
-      )}
-
-      {titular && editando && (
+    <Tarjeta titulo="Titular" accion={!editando && <BotonEditar onClick={() => setEditando(true)} />}>
+      {editando ? (
         <FormularioHuesped huesped={titular} completo ocupado={ocupado} onGuardar={onGuardar} onCancelar={() => setEditando(false)} />
-      )}
-
-      {titular && !editando && (
-        <div className="space-y-2">
-          <h4 className="text-lg font-bold text-slate-900 capitalize tracking-tight">{titular.nombre} {titular.apellido}</h4>
-          <div className="grid grid-cols-1 gap-1.5 text-xs font-medium text-slate-500">
-            <p>DNI: <span className="text-slate-800 font-semibold">{titular.dni}</span></p>
-            {titular.cuil && <p>CUIL: <span className="text-slate-800 font-semibold">{titular.cuil}</span></p>}
-            {titular.telefono && <p>Tel: <span className="text-slate-800 font-semibold">{titular.telefono}</span></p>}
-            {titular.direccion && <p>Dir: <span className="text-slate-800 font-semibold">{titular.direccion}</span></p>}
-            {(titular.vehiculoModelo || titular.vehiculoPatente) && (
-              <div className="mt-1 p-2 bg-slate-50 rounded-lg border border-slate-100 text-[11px] font-semibold text-slate-600 flex items-center gap-1.5">
-                <span>🚗</span> {titular.vehiculoModelo}
-                {titular.vehiculoPatente && (
-                  <> — <span className="font-mono bg-slate-200/60 px-1 rounded">{titular.vehiculoPatente}</span></>
-                )}
-              </div>
-            )}
-          </div>
+      ) : (
+        <div className="space-y-3">
+          <p className="text-xl font-semibold text-slate-900 capitalize">{titular.nombre} {titular.apellido}</p>
+          <ul>
+            <Dato icono={IdCard}>
+              DNI {titular.dni}
+              {titular.cuil && <span className="text-slate-500">. CUIL {titular.cuil}</span>}
+            </Dato>
+            {titular.telefono && <Dato icono={Phone}>{titular.telefono}</Dato>}
+            {titular.direccion && <Dato icono={MapPin}>{titular.direccion}</Dato>}
+            {vehiculo && <Dato icono={Car}>{vehiculo}</Dato>}
+          </ul>
           {titular.notasComportamiento && (
-            <div className="mt-2 p-2.5 bg-amber-50/60 border border-amber-100 rounded-lg text-xs text-amber-900">
-              {titular.notasComportamiento}
+            <div className="flex gap-2.5 p-3 bg-amber-50 border border-amber-200 rounded-xl text-[15px] text-amber-950">
+              <StickyNote className="size-5 shrink-0 text-amber-700" aria-hidden="true" />
+              <p>{titular.notasComportamiento}</p>
+            </div>
+          )}
+          {titular.telefono && (
+            <div className="grid grid-cols-2 gap-2 pt-1">
+              <a href={`tel:${titular.telefono.replace(/[^\d+]/g, '')}`} className={clasesDeBoton({ variante: 'secundario' })}>
+                <Phone className="size-5" aria-hidden="true" />
+                Llamar
+              </a>
+              <BotonWhatsapp
+                telefono={titular.telefono}
+                mensaje={`Hola, *${titular.nombre}* 😊\n¡Los esperamos pronto en Aroma del Potrero 🌿!\n\nLes recordamos algunos detalles previos a su llegada:\n...`}
+              />
             </div>
           )}
         </div>
@@ -57,37 +77,42 @@ export function TarjetaAcompanantes({ acompanantes, ocupado, onGuardar, onQuitar
 
   return (
     <Tarjeta titulo={`Acompañantes (${acompanantes.length})`}>
-      <div className="space-y-2.5">
+      <ul className="divide-y divide-slate-100">
         {acompanantes.map((a) => (
-          <div key={a.id} className="p-3 bg-slate-50/60 rounded-lg border border-slate-100 text-xs">
+          <li key={a.id} className="py-2 first:pt-0 last:pb-0">
             {editandoId === a.id ? (
               <FormularioHuesped huesped={a} ocupado={ocupado} onGuardar={onGuardar} onCancelar={() => setEditandoId(null)} />
             ) : (
-              <div className="flex items-start justify-between gap-2">
-                <div>
-                  <p className="font-bold text-slate-800 capitalize">{a.nombre} {a.apellido}</p>
-                  <p className="text-[11px] font-medium text-slate-400 mt-0.5">
-                    DNI {a.dni} {a.telefono && `| Tel: ${a.telefono}`}
+              <div className="flex items-center gap-2">
+                <div className="flex-1 min-w-0">
+                  <p className="text-[15px] font-semibold text-slate-900 capitalize">{a.nombre} {a.apellido}</p>
+                  <p className="text-sm text-slate-500">
+                    DNI {a.dni}
+                    {a.telefono && `. Tel. ${a.telefono}`}
                   </p>
                 </div>
-                <div className="flex gap-2">
-                  <button type="button" onClick={() => setEditandoId(a.id)} className="text-[10px] font-bold text-slate-500 bg-slate-200/70 px-2 py-0.5 rounded cursor-pointer">
-                    Editar
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => onQuitar(a.id)}
-                    disabled={ocupado}
-                    className="text-[10px] font-bold text-rose-600 bg-rose-50 px-2 py-0.5 rounded border border-rose-100 cursor-pointer"
-                  >
-                    Quitar
-                  </button>
-                </div>
+                <button
+                  type="button"
+                  onClick={() => setEditandoId(a.id)}
+                  aria-label={`Editar a ${a.nombre} ${a.apellido}`}
+                  className="size-11 shrink-0 rounded-xl flex items-center justify-center text-slate-500 hover:bg-slate-100 active:bg-slate-200 cursor-pointer"
+                >
+                  <Pencil className="size-5" aria-hidden="true" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onQuitar(a.id)}
+                  disabled={ocupado}
+                  aria-label={`Quitar a ${a.nombre} ${a.apellido} de la reserva`}
+                  className="size-11 shrink-0 rounded-xl flex items-center justify-center text-slate-500 hover:text-rose-700 hover:bg-rose-50 active:bg-rose-100 cursor-pointer disabled:opacity-50"
+                >
+                  <UserMinus className="size-5" aria-hidden="true" />
+                </button>
               </div>
             )}
-          </div>
+          </li>
         ))}
-      </div>
+      </ul>
     </Tarjeta>
   );
 }

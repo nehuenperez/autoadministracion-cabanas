@@ -1,6 +1,7 @@
 import { useState } from 'react';
-
-const campo = 'p-2 border border-slate-200 rounded-lg bg-slate-50 w-full';
+import { claseDeCampo } from '../../utils/estilos.js';
+import Campo from '../comunes/Campo.jsx';
+import Boton from '../comunes/Boton.jsx';
 
 /**
  * Edición de los datos de un huésped. `completo` muestra todo (titular); sin
@@ -19,14 +20,16 @@ export default function FormularioHuesped({ huesped, completo = false, ocupado, 
     notasComportamiento: huesped.notasComportamiento ?? '',
   });
 
-  const entrada = (nombre, placeholder, clases = '') => (
-    <input
-      type="text"
-      value={form[nombre]}
-      onChange={(e) => setForm({ ...form, [nombre]: e.target.value })}
-      placeholder={placeholder}
-      className={`${campo} ${clases}`}
-    />
+  const entrada = (nombre, rotulo, props = {}) => (
+    <Campo rotulo={rotulo}>
+      <input
+        type="text"
+        value={form[nombre]}
+        onChange={(e) => setForm({ ...form, [nombre]: e.target.value })}
+        className={claseDeCampo}
+        {...props}
+      />
+    </Campo>
   );
 
   async function guardar() {
@@ -39,44 +42,35 @@ export default function FormularioHuesped({ huesped, completo = false, ocupado, 
   }
 
   return (
-    <div className="space-y-2.5 text-xs pt-1">
-      <div className="grid grid-cols-2 gap-2">
-        {entrada('nombre', 'Nombre')}
-        {entrada('apellido', 'Apellido')}
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 gap-3">
+        {entrada('nombre', 'Nombre', { autoComplete: 'off' })}
+        {entrada('apellido', 'Apellido', { autoComplete: 'off' })}
       </div>
-      {completo ? (
+      {entrada('telefono', 'Teléfono', { type: 'tel', inputMode: 'tel' })}
+      {completo && (
         <>
-          <div className="grid grid-cols-2 gap-2">
-            {entrada('telefono', 'Teléfono')}
-            {entrada('cuil', 'CUIL')}
+          {entrada('cuil', 'CUIL', { inputMode: 'numeric' })}
+          {entrada('direccion', 'Domicilio')}
+          <div className="grid grid-cols-2 gap-3">
+            {entrada('vehiculoModelo', 'Vehículo')}
+            {entrada('vehiculoPatente', 'Patente', { autoCapitalize: 'characters' })}
           </div>
-          {entrada('direccion', 'Dirección')}
-          <div className="grid grid-cols-2 gap-2">
-            {entrada('vehiculoModelo', 'Vehículo Modelo')}
-            {entrada('vehiculoPatente', 'Patente')}
-          </div>
-          <textarea
-            value={form.notasComportamiento}
-            onChange={(e) => setForm({ ...form, notasComportamiento: e.target.value })}
-            placeholder="Notas de comportamiento"
-            className={`${campo} h-16`}
-          />
+          <Campo rotulo="Notas" ayuda="Sólo las ves vos. Aparecen cuando vuelve a reservar.">
+            <textarea
+              value={form.notasComportamiento}
+              onChange={(e) => setForm({ ...form, notasComportamiento: e.target.value })}
+              rows={3}
+              className={`${claseDeCampo} py-3`}
+            />
+          </Campo>
         </>
-      ) : (
-        entrada('telefono', 'Teléfono')
       )}
-      <div className="flex gap-2 pt-1">
-        <button
-          type="button"
-          onClick={guardar}
-          disabled={ocupado || !form.nombre.trim() || !form.apellido.trim()}
-          className="flex-1 bg-blue-600 text-white p-2 rounded-lg font-bold cursor-pointer disabled:bg-slate-300"
-        >
+      <div className="flex gap-2">
+        <Boton ancho onClick={guardar} disabled={ocupado || !form.nombre.trim() || !form.apellido.trim()}>
           Guardar
-        </button>
-        <button type="button" onClick={onCancelar} className="bg-slate-200 text-slate-700 px-3 py-2 rounded-lg font-bold cursor-pointer">
-          Cancelar
-        </button>
+        </Boton>
+        <Boton variante="secundario" onClick={onCancelar}>Cancelar</Boton>
       </div>
     </div>
   );

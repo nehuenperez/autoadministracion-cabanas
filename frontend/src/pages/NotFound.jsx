@@ -1,13 +1,13 @@
-import { Link } from 'react-router-dom';
+import { CalendarDays } from 'lucide-react';
+import { BotonEnlace } from '../components/comunes/Boton.jsx';
 
 export default function NotFound() {
   return (
-    <div className="min-h-screen bg-[#f8fafc] flex items-center justify-center px-4">
-      <div className="max-w-sm w-full bg-white rounded-2xl p-6 border border-slate-200/70 shadow-xs text-center space-y-4">
-        <p className="text-sm font-bold text-slate-800">Página no encontrada</p>
-        <Link to="/" className="inline-block bg-slate-900 text-white px-4 py-2 rounded-xl text-xs font-bold">
-          Ir al calendario
-        </Link>
+    <div className="min-h-screen bg-slate-50 flex items-center justify-center px-4">
+      <div className="max-w-sm w-full text-center space-y-4">
+        <h1 className="text-xl font-bold text-slate-900">Esta página no existe</h1>
+        <p className="text-[15px] text-slate-500">Puede que el enlace esté mal escrito o que la reserva se haya borrado.</p>
+        <BotonEnlace to="/" icono={CalendarDays}>Ir al calendario</BotonEnlace>
       </div>
     </div>
   );

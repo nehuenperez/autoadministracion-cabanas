@@ -1,21 +1,22 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { NOMBRES_MESES, diasDelMes, formatearRango, hoyISO } from '../../utils/fechas.js';
+import { BedDouble, LogIn, LogOut } from 'lucide-react';
+import { NOMBRES_MESES, deISO, diasDelMes, formatearDia, formatearRango, hoyISO } from '../../utils/fechas.js';
 import { semaforoDe, ESTILOS, REFERENCIAS } from '../../utils/semaforo.js';
-import { titularDe } from '../../utils/reservas.js';
 import SelectorDeMes from '../comunes/SelectorDeMes.jsx';
+import ControlSegmentado from '../comunes/ControlSegmentado.jsx';
+import FilaDeReserva from './FilaDeReserva.jsx';
 
-const DIAS_SEMANA = ['Lu', 'Ma', 'Mi', 'Ju', 'Vi', 'Sa', 'Do'];
+const DIAS_SEMANA = ['Lu', 'Ma', 'Mi', 'Ju', 'Vi', 'Sá', 'Do'];
 
 const MOVIMIENTOS = {
-  egreso: { texto: 'EGRESA', clases: 'bg-amber-500 text-slate-950', orden: 0 },
-  ingreso: { texto: 'INGRESA', clases: 'bg-emerald-600 text-white', orden: 1 },
-  estadia: { texto: 'EN ESTADÍA', clases: 'bg-slate-200 text-slate-700', orden: 2 },
+  egreso: { texto: 'Sale', Icono: LogOut, color: 'bg-slate-100 text-slate-600', orden: 0 },
+  ingreso: { texto: 'Entra', Icono: LogIn, color: 'bg-emerald-50 text-emerald-700', orden: 1 },
+  estadia: { texto: 'Alojado', Icono: BedDouble, color: 'bg-sky-50 text-sky-700', orden: 2 },
 };
 
 /**
- * Qué pasa en una cabaña un día dado: si está ocupada (y con qué color) y la
- * lista de movimientos (quién entra, quién sale, quién está).
+ * Qué pasa en una cabaña un día dado: si la noche está ocupada (y con qué
+ * color) y la lista de movimientos (quién entra, quién sale, quién está).
  */
 function estadoDelDia(fecha, reservas) {
   let ocupacion = null;
@@ -42,34 +43,40 @@ function GrillaDelMes({ anio, mes, reservas, diaSeleccionado, onSeleccionar }) {
   const hoy = hoyISO();
 
   return (
-    <div className="grid grid-cols-7 bg-slate-50/20">
+    <div className="grid grid-cols-7 gap-1">
       {diasDelMes(anio, mes).map((fecha, i) => {
-        if (!fecha) return <div key={`vacio-${i}`} className="p-1 bg-slate-50/30 border border-slate-100/40" />;
+        if (!fecha) return <div key={`vacio-${i}`} />;
 
         const { ocupacion, movimientos } = estadoDelDia(fecha, reservas);
         const activos = movimientos.filter((m) => m.reserva.estado !== 'Abortada');
+        const entra = activos.some((m) => m.tipo === 'ingreso');
+        const sale = activos.some((m) => m.tipo === 'egreso');
         const estilo = ocupacion && ESTILOS[ocupacion.clave];
+        const seleccionado = diaSeleccionado === fecha;
+        const esHoy = fecha === hoy;
 
         return (
           <button
             type="button"
             key={fecha}
             onClick={() => onSeleccionar(fecha)}
-            className={`p-1 min-h-12 border border-slate-100 flex flex-col justify-between items-center relative transition-all cursor-pointer focus:outline-hidden ${
-              estilo ? `${estilo.celda} border-l-2` : 'bg-white hover:bg-slate-50'
-            } ${diaSeleccionado === fecha ? 'ring-2 ring-blue-600/80 z-10 rounded-lg' : ''}`}
+            aria-pressed={seleccionado}
+            aria-label={`${formatearDia(fecha)}${ocupacion ? `, ocupado, ${ocupacion.etiqueta}` : ', libre'}${entra ? ', entra alguien' : ''}${sale ? ', sale alguien' : ''}`}
+            className={`relative min-h-12 rounded-lg flex flex-col items-center justify-center gap-0.5 cursor-pointer transition-colors ${
+              estilo ? estilo.celda : 'hover:bg-slate-100'
+            } ${seleccionado ? 'ring-2 ring-blue-600 ring-offset-1' : ''}`}
           >
             <span
-              className={`text-xs ${estilo ? estilo.numero : 'font-bold text-slate-700'} ${
-                fecha === hoy ? 'bg-slate-950 text-white w-4 h-4 flex items-center justify-center rounded-full text-[9px] font-black no-underline' : ''
+              className={`size-7 flex items-center justify-center rounded-full text-[15px] tabular-nums ${
+                esHoy ? 'bg-slate-900 text-white font-bold' : estilo ? estilo.numero : 'text-slate-800'
               }`}
             >
               {Number(fecha.slice(8))}
             </span>
-            <div className="flex gap-1 justify-center items-center h-2 mb-0.5 w-full">
-              {activos.some((m) => m.tipo === 'ingreso') && <span className="w-1.5 h-1.5 rounded-full bg-slate-950" />}
-              {activos.some((m) => m.tipo === 'egreso') && <span className="w-1.5 h-1.5 rounded-full bg-violet-600" />}
-            </div>
+            <span className="flex gap-1 h-1.5" aria-hidden="true">
+              {entra && <span className="size-1.5 rounded-full bg-slate-900" />}
+              {sale && <span className="size-1.5 rounded-full ring-1 ring-slate-500 ring-inset" />}
+            </span>
           </button>
         );
       })}
@@ -77,113 +84,105 @@ function GrillaDelMes({ anio, mes, reservas, diaSeleccionado, onSeleccionar }) {
   );
 }
 
-function AgendaDelDia({ fecha, movimientos }) {
-  const navigate = useNavigate();
-  const [, mes, dia] = fecha.split('-');
-
+function Referencias() {
   return (
-    <div className="bg-white rounded-xl p-4 border border-slate-200/70 shadow-xs space-y-3">
-      <div className="flex justify-between items-center border-b border-slate-100 pb-1.5">
-        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Agenda: {dia}/{mes}</span>
-        <span className="text-[9px] font-bold bg-slate-100 border border-slate-200 px-2 py-0.5 rounded-md text-slate-500">
-          {movimientos.length} {movimientos.length === 1 ? 'Movimiento' : 'Movimientos'}
-        </span>
-      </div>
-
-      {movimientos.length === 0 ? (
-        <p className="text-[11px] font-medium text-slate-400 py-2.5 text-center bg-slate-50/40 rounded-lg border border-dashed border-slate-100">
-          Sin huéspedes ni movimientos para esta unidad este día.
-        </p>
-      ) : (
-        <div className="space-y-2">
-          {movimientos.map(({ reserva, tipo, semaforo }) => {
-            const titular = titularDe(reserva);
-            return (
-              <button
-                type="button"
-                key={`${reserva.id}-${tipo}`}
-                onClick={() => navigate(`/reservas/${reserva.id}`)}
-                className="w-full text-left p-3 bg-slate-50/60 hover:bg-slate-50 border border-slate-100 rounded-xl flex items-center justify-between gap-2 text-xs cursor-pointer active:scale-[0.995] transition-all"
-              >
-                <div className="space-y-0.5">
-                  <span className={`text-[8px] font-black uppercase px-1.5 py-0.5 rounded-xs ${MOVIMIENTOS[tipo].clases}`}>
-                    {MOVIMIENTOS[tipo].texto}
-                  </span>
-                  <p className="font-bold text-slate-700 capitalize">
-                    {titular ? `${titular.nombre} ${titular.apellido}` : '👤 Sin responsable asignado'}
-                  </p>
-                  <p className="text-[10px] text-slate-400 font-medium">
-                    {formatearRango(reserva.fechaCheckIn, reserva.fechaCheckOut)}
-                  </p>
-                </div>
-                <span className={`text-[9px] font-bold border px-2 py-0.5 rounded-md shrink-0 ${ESTILOS[semaforo.clave].insignia}`}>
-                  {semaforo.etiqueta}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-      )}
-    </div>
+    <ul className="flex flex-wrap gap-x-4 gap-y-2 pt-3 border-t border-slate-100 text-sm text-slate-600">
+      {REFERENCIAS.map(({ clave, texto }) => (
+        <li key={clave} className="flex items-center gap-1.5">
+          <span className={`size-2.5 rounded-full ${ESTILOS[clave].punto}`} aria-hidden="true" />
+          {texto}
+        </li>
+      ))}
+      <li className="flex items-center gap-1.5">
+        <span className="size-1.5 rounded-full bg-slate-900" aria-hidden="true" />
+        Entra
+      </li>
+      <li className="flex items-center gap-1.5">
+        <span className="size-1.5 rounded-full ring-1 ring-slate-500 ring-inset" aria-hidden="true" />
+        Sale
+      </li>
+    </ul>
   );
 }
 
-/** Calendario mensual por cabaña, con la agenda del día elegido debajo de cada uno. */
+function AgendaDelDia({ fecha, movimientos }) {
+  return (
+    <section className="bg-white rounded-2xl border border-slate-200 p-4 space-y-2" aria-live="polite">
+      <h2 className="text-base font-semibold text-slate-900 first-letter:uppercase">{formatearDia(fecha)}</h2>
+      {movimientos.length === 0 ? (
+        <p className="text-[15px] text-slate-500 py-1">Cabaña libre, sin entradas ni salidas.</p>
+      ) : (
+        <ul>
+          {movimientos.map(({ reserva, tipo, semaforo }) => {
+            const { texto, Icono, color } = MOVIMIENTOS[tipo];
+            return (
+              <FilaDeReserva
+                key={`${reserva.id}-${tipo}`}
+                reserva={reserva}
+                icono={Icono}
+                colorIcono={color}
+                detalle={`${texto}. ${formatearRango(reserva.fechaCheckIn, reserva.fechaCheckOut)}`}
+                insignia={
+                  <span className={`inline-block text-xs font-semibold border px-2 py-0.5 rounded-md ${ESTILOS[semaforo.clave].insignia}`}>
+                    {semaforo.etiqueta}
+                  </span>
+                }
+              />
+            );
+          })}
+        </ul>
+      )}
+    </section>
+  );
+}
+
+/**
+ * Calendario mensual de una cabaña a la vez (se cambia con las pestañas), con
+ * la agenda del día elegido debajo.
+ */
 export default function CalendarioMensual({ reservas = [], cabanas = [] }) {
-  const [mes, setMes] = useState(() => new Date(new Date().getFullYear(), new Date().getMonth(), 1));
+  const [cabanaId, setCabanaId] = useState(() => cabanas[0]?.id);
   const [diaSeleccionado, setDiaSeleccionado] = useState(hoyISO);
+  const [mes, setMes] = useState(() => {
+    const hoy = deISO(hoyISO());
+    return new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+  });
+
+  const reservasDeLaCabana = reservas.filter((r) => Number(r.cabanaId) === Number(cabanaId));
 
   return (
     <div className="space-y-4">
-      <SelectorDeMes
-        titulo={`${NOMBRES_MESES[mes.getMonth()]} ${mes.getFullYear()}`}
-        onCambiar={(salto) => setMes(new Date(mes.getFullYear(), mes.getMonth() + salto, 1))}
-      />
+      <section className="bg-white rounded-2xl border border-slate-200 p-4 space-y-3">
+        {cabanas.length > 1 && (
+          <ControlSegmentado
+            etiqueta="Cabaña"
+            opciones={cabanas.map((c) => ({ valor: c.id, texto: c.nombre }))}
+            valor={cabanaId}
+            onCambiar={setCabanaId}
+          />
+        )}
 
-      <div className="space-y-6">
-        {cabanas.map((cabana) => {
-          const reservasDeLaCabana = reservas.filter((r) => Number(r.cabanaId) === Number(cabana.id));
-          return (
-            <div key={cabana.id} className="space-y-3">
-              <div className="bg-white rounded-xl border border-slate-200/70 overflow-hidden shadow-xs p-4 space-y-3">
-                <div className="flex justify-between items-center border-b border-slate-50 pb-1.5">
-                  <h3 className="text-sm font-black text-slate-900 tracking-tight">{cabana.nombre}</h3>
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Calendario</span>
-                </div>
-                <div className="grid grid-cols-7 text-center text-[9px] font-bold text-slate-400 uppercase tracking-widest pb-1">
-                  {DIAS_SEMANA.map((d) => <div key={d}>{d}</div>)}
-                </div>
-                <GrillaDelMes
-                  anio={mes.getFullYear()}
-                  mes={mes.getMonth()}
-                  reservas={reservasDeLaCabana}
-                  diaSeleccionado={diaSeleccionado}
-                  onSeleccionar={setDiaSeleccionado}
-                />
-              </div>
-              <AgendaDelDia
-                fecha={diaSeleccionado}
-                movimientos={estadoDelDia(diaSeleccionado, reservasDeLaCabana).movimientos}
-              />
-            </div>
-          );
-        })}
-      </div>
+        <SelectorDeMes
+          titulo={`${NOMBRES_MESES[mes.getMonth()]} ${mes.getFullYear()}`}
+          onCambiar={(salto) => setMes(new Date(mes.getFullYear(), mes.getMonth() + salto, 1))}
+        />
 
-      <div className="bg-white rounded-xl p-3 border border-slate-200/70 shadow-xs flex flex-col gap-2 text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-        <div className="flex flex-wrap justify-center gap-x-4 gap-y-2 border-b border-slate-100 pb-2">
-          {REFERENCIAS.map(({ clave, texto }) => (
-            <div key={clave} className="flex items-center gap-1.5">
-              <span className={`w-2 h-2 rounded-full ${ESTILOS[clave].punto}`} />
-              <span>{texto}</span>
-            </div>
-          ))}
+        <div className="grid grid-cols-7 text-center text-xs font-medium text-slate-500" aria-hidden="true">
+          {DIAS_SEMANA.map((d) => <div key={d}>{d}</div>)}
         </div>
-        <div className="flex flex-wrap justify-center gap-x-4 gap-y-1 text-[9px] text-slate-400 capitalize">
-          <div className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-slate-950" /><span>Check-in (Entra)</span></div>
-          <div className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-violet-600" /><span>Check-out (Sale)</span></div>
-        </div>
-      </div>
+
+        <GrillaDelMes
+          anio={mes.getFullYear()}
+          mes={mes.getMonth()}
+          reservas={reservasDeLaCabana}
+          diaSeleccionado={diaSeleccionado}
+          onSeleccionar={setDiaSeleccionado}
+        />
+
+        <Referencias />
+      </section>
+
+      <AgendaDelDia fecha={diaSeleccionado} movimientos={estadoDelDia(diaSeleccionado, reservasDeLaCabana).movimientos} />
     </div>
   );
 }

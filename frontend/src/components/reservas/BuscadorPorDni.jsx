@@ -1,7 +1,11 @@
 import { useState } from 'react';
+import { Search, StickyNote } from 'lucide-react';
 import { buscarPorDni } from '../../services/huespedes.service.js';
+import { claseDeCampo } from '../../utils/estilos.js';
+import Campo from '../comunes/Campo.jsx';
+import Boton from '../comunes/Boton.jsx';
+import Aviso from '../comunes/Aviso.jsx';
 
-const campo = 'w-full p-2.5 text-sm border border-slate-200 rounded-lg bg-white focus:outline-hidden focus:border-blue-500';
 const VACIO = { nombre: '', apellido: '', dni: '', telefono: '', direccion: '', vehiculoModelo: '', vehiculoPatente: '' };
 
 /**
@@ -33,68 +37,62 @@ export default function BuscadorPorDni({ rol, onHuespedListo }) {
     onHuespedListo({ ...nuevos, rol });
   }
 
-  const entrada = (nombreCampo, placeholder) => (
-    <input placeholder={placeholder} value={datos[nombreCampo] ?? ''} onChange={(e) => cambiar(nombreCampo, e.target.value)} className={campo} />
+  const entrada = (nombreCampo, rotulo, props = {}) => (
+    <Campo rotulo={rotulo}>
+      <input value={datos[nombreCampo] ?? ''} onChange={(e) => cambiar(nombreCampo, e.target.value)} className={claseDeCampo} {...props} />
+    </Campo>
   );
 
   const mostrarCampos = estado === 'encontrado' || estado === 'nuevo';
 
   return (
-    <div className="space-y-2">
-      <div className="flex gap-2">
-        <input
-          placeholder="DNI"
-          inputMode="numeric"
-          value={datos.dni}
-          onChange={(e) => cambiar('dni', e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') {
-              e.preventDefault();
-              handleBuscar();
-            }
-          }}
-          className={campo}
-        />
-        <button
-          type="button"
-          onClick={handleBuscar}
-          disabled={estado === 'buscando' || !datos.dni.trim()}
-          className="bg-slate-800 text-white text-xs font-bold px-4 rounded-lg cursor-pointer disabled:bg-slate-300"
-        >
-          {estado === 'buscando' ? '...' : 'Buscar'}
-        </button>
-      </div>
+    <div className="space-y-3">
+      <Campo rotulo="DNI">
+        <div className="flex gap-2">
+          <input
+            inputMode="numeric"
+            value={datos.dni}
+            onChange={(e) => cambiar('dni', e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                handleBuscar();
+              }
+            }}
+            className={claseDeCampo}
+          />
+          <Boton variante="secundario" icono={Search} onClick={handleBuscar} disabled={estado === 'buscando' || !datos.dni.trim()}>
+            {estado === 'buscando' ? 'Buscando…' : 'Buscar'}
+          </Boton>
+        </div>
+      </Campo>
 
-      {estado === 'error' && (
-        <p className="text-[11px] font-semibold text-rose-600">No se pudo buscar. Revisá la conexión y probá de nuevo.</p>
-      )}
+      {estado === 'error' && <Aviso>No se pudo buscar. Revisá la conexión y probá de nuevo.</Aviso>}
 
       {mostrarCampos && (
-        <div className="space-y-2 animate-aparecer">
-          {estado === 'nuevo' && <p className="text-[11px] text-slate-500">Huésped nuevo, completá los datos:</p>}
-          {estado === 'encontrado' && (
-            <p className="text-[9px] font-bold uppercase inline-block bg-emerald-50 text-emerald-700 border border-emerald-100 px-1.5 py-0.5 rounded">
-              Ya vino antes
-            </p>
-          )}
-          <div className="grid grid-cols-2 gap-2">
+        <div className="space-y-3 animate-aparecer">
+          <p className="text-sm text-slate-500">
+            {estado === 'encontrado' ? 'Ya vino antes: revisá que sus datos sigan iguales.' : 'Huésped nuevo: completá sus datos.'}
+          </p>
+          <div className="grid grid-cols-2 gap-3">
             {entrada('nombre', 'Nombre')}
             {entrada('apellido', 'Apellido')}
           </div>
           {rol === 'titular' && (
             <>
-              {entrada('telefono', 'Teléfono (para WhatsApp)')}
+              {entrada('telefono', 'Teléfono', { type: 'tel', inputMode: 'tel' })}
               {entrada('direccion', 'Domicilio')}
-              <div className="grid grid-cols-2 gap-2">
-                {entrada('vehiculoModelo', 'Modelo del vehículo')}
-                {entrada('vehiculoPatente', 'Patente')}
+              <div className="grid grid-cols-2 gap-3">
+                {entrada('vehiculoModelo', 'Vehículo')}
+                {entrada('vehiculoPatente', 'Patente', { autoCapitalize: 'characters' })}
               </div>
             </>
           )}
           {estado === 'encontrado' && datos.notasComportamiento && (
-            <p className="text-[11px] p-2 bg-amber-50/60 border border-amber-100 rounded-lg text-amber-900">
-              📋 Notas: {datos.notasComportamiento}
-            </p>
+            <div className="flex gap-2.5 p-3 bg-amber-50 border border-amber-200 rounded-xl text-[15px] text-amber-950">
+              <StickyNote className="size-5 shrink-0 text-amber-700" aria-hidden="true" />
+              <p>{datos.notasComportamiento}</p>
+            </div>
           )}
         </div>
       )}
